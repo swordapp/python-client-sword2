@@ -2,10 +2,13 @@
 # -*- coding: utf-8 -*-
 
 from sword2_logging import logging
+from implementation_info import __version__
 coll_l = logging.getLogger(__name__)
 
 from compatible_libs import etree
 from utils import NS, get_text
+
+from datetime import datetime
 
 class Category(object):
     def __init__(self, term=None,
@@ -148,16 +151,29 @@ class Entry(object):
     bootstrap = """<?xml version="1.0"?>
 <entry xmlns="http://www.w3.org/2005/Atom"
         xmlns:dcterms="http://purl.org/dc/terms/">
-</entry>"""
+    <generator uri="http://bitbucket.org/beno/python-sword2" version="%s"/>
+</entry>""" % __version__
     def __init__(self, **kw):
         self.entry = etree.fromstring(self.bootstrap)
-        for k,v in kw.iteritems():
-            self.add_field(k,v)
+        if not 'updated' in kw.keys():
+            kw['updated'] = datetime.now().isoformat()
+        self.add_fields(**kw)
+    
+    def register_namespace(self, prefix, uri):
+        etree.register_namespace(prefix, uri)
+        self.add_ns.append(prefix)
+        if prefix not in NS.keys():
+            NS[prefix] = "{%s}%%s" % uri
             
     def add_field(self, k, v):
         if k in self.atom_fields:
-            e = etree.SubElement(self.entry, NS['atom'] % k)
-            e.text = v
+            # These should be unique!
+            old_e = self.entry.find(NS['atom'] % k)
+            if old_e == None:
+                e = etree.SubElement(self.entry, NS['atom'] % k)
+                e.text = v
+            else:
+                old_e.text = v
         elif "_" in k:
             # possible XML namespace, eg 'dcterms_title'
             nmsp, tag = k.split("_", 1)
@@ -166,6 +182,10 @@ class Entry(object):
                 e.text = v
         elif k == "author" and isinstance(v, dict):
             self.add_author(**v)
+
+    def add_fields(self, **kw):
+        for k,v in kw.iteritems():
+            self.add_field(k,v)
 
     def add_author(self, name, uri=None, email=None):
         a = etree.SubElement(self.entry, NS['atom'] % 'author')
@@ -180,3 +200,6 @@ class Entry(object):
 
     def __str__(self):
         return etree.tostring(self.entry)
+        
+    def pretty_print(self):
+        return etree.tostring(self.entry, pretty_print=True)

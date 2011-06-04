@@ -1,8 +1,9 @@
 from service_document import ServiceDocument
-from collection import SDCollection, Collection_Feed, Entry
+from collection import SDCollection, Collection_Feed, Entry, Category
 from connection import Connection
 from transaction_history import Transaction_History
-from utils import Timer, NS
+from exceptions import *
+from server_errors import SWORD2ERRORSBYIRI, SWORD2ERRORSBYNAME
+from utils import Timer, NS, get_md5, create_multipart_related
+from implementation_info import *
 
-__version__ = "0.1"
-__author__ = "Ben O'Steen <@benosteen>"

@@ -69,10 +69,25 @@ class TestDepositReceipt(TestController):
         dr = Deposit_Receipt(DR)
         assert dr.metadata['dcterms_title'] == "Title"
         assert dr.metadata['atom_id'] == "info:something:1"
+        assert dr.id == "info:something:1"
+        assert dr.title == "My Deposit"
+        assert dr.metadata['sword_verboseDescription'] == "Verbose description"
         
     def test_02_edit(self):
         dr = Deposit_Receipt(DR)
         assert dr.edit == "http://www.swordserver.ac.uk/col1/mydeposit.atom"
         assert dr.edit_media == "http://www.swordserver.ac.uk/col1/mydeposit"
-        assert len(dr.links.keys()) == 3
-        assert dr.metadata['sword_packaging'] == "http://purl.org/net/sword/package/BagIt"
+        
+    def test_03_content_iri(self):
+        dr = Deposit_Receipt(DR)
+        assert dr.edit == "http://www.swordserver.ac.uk/col1/mydeposit.atom"
+        assert "http://www.swordserver.ac.uk/col1/mydeposit" in dr.content.keys()
+        assert dr.content["http://www.swordserver.ac.uk/col1/mydeposit"]['type'] == "application/zip"
+        # Check convenience attribute 'cont_iri'
+        assert dr.cont_iri == "http://www.swordserver.ac.uk/col1/mydeposit"
+        
+    def test_04_packaging(self):
+        dr = Deposit_Receipt(DR)
+        assert "http://purl.org/net/sword/package/BagIt" in dr.packaging
+        assert len(dr.packaging) == 1
+    

@@ -1,6 +1,7 @@
 from . import TestController
 
 from sword2 import Connection, Entry
+from sword2.exceptions import PackagingFormatNotAvailable
 from sword2.compatible_libs import json
 
 long_service_doc = '''<?xml version="1.0" ?>
@@ -106,25 +107,99 @@ class TestConnection(TestController):
    
     def test_06_Simple_POST_to_sss(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
-        resp = conn.create_resource("Payload is just a load of text", 
-                                    "text/plain", 
-                                    "readme.txt", 
-                                    'http://purl.org/net/sword/package/Binary', 
-                                    workspace='Main Site', 
-                                    collection=conn.sd.workspaces[0][1][0].title, 
+        resp = conn.create_resource(payload = "Payload is just a load of text", 
+                                    mimetype = "text/plain", 
+                                    filename = "readme.txt", 
+                                    packaging = 'http://purl.org/net/sword/package/Binary', 
+                                    workspace = 'Main Site', 
+                                    collection = conn.sd.workspaces[0][1][0].title, 
                                     in_progress=True, 
                                     metadata_entry=None)
    
     def test_07_Multipart_POST_to_sss(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
-        resp = conn.create_resource("Multipart payload here", 
-                                    "text/plain", 
-                                    "readme.txt", 
-                                    'http://purl.org/net/sword/package/Binary', 
+        resp = conn.create_resource(payload = "Multipart payload here", 
+                                    metadata_entry = e, 
+                                    mimetype = "text/plain", 
+                                    filename = "readme.txt", 
+                                    packaging = 'http://purl.org/net/sword/package/Binary', 
                                     workspace='Main Site', 
                                     collection=conn.sd.workspaces[0][1][0].title, 
+                                    in_progress=True)
+        assert resp != (None, None)
+
+      
+    def test_08_Simple_POST_to_sss_w_coliri(self):
+        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        resp = conn.create_resource(payload = "Payload is just a load of text", 
+                                    mimetype = "text/plain", 
+                                    filename = "readme.txt", 
+                                    packaging = 'http://purl.org/net/sword/package/Binary',
+                                    col_iri = conn.sd.workspaces[0][1][0].href, 
                                     in_progress=True, 
-                                    metadata_entry=e)
+                                    metadata_entry=None)
    
+    def test_09_Multipart_POST_to_sss_w_coliri(self):
+        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
+        resp = conn.create_resource(payload = "Multipart payload here", 
+                                    metadata_entry = e, 
+                                    mimetype = "text/plain", 
+                                    filename = "readme.txt", 
+                                    packaging = 'http://purl.org/net/sword/package/Binary',
+                                    col_iri = conn.sd.workspaces[0][1][0].href, 
+                                    in_progress=True)
+        assert resp != (None, None)
+
+    def test_10_Metadata_POST_to_sss(self):
+        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
+        resp = conn.create_resource(metadata_entry = e,
+                                    workspace='Main Site', 
+                                    collection=conn.sd.workspaces[0][1][0].title, 
+                                    in_progress=True)
+        assert resp != (None, None)
+
+      
+    def test_11_Metadata_POST_to_sss_w_coliri(self):
+        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
+        resp = conn.create_resource(metadata_entry = e,
+                                    col_iri = conn.sd.workspaces[0][1][0].href, 
+                                    in_progress=True)
+        assert resp != (None, None)
     
+    def test_12_Simple_POST_and_GET(self):
+        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        col_iri = conn.sd.workspaces[0][1][0].href  # pick the first collection
+        location, dr = conn.create_resource(payload = "Payload is just a load of text", 
+                                    mimetype = "text/plain", 
+                                    filename = "readme.txt", 
+                                    packaging = 'http://purl.org/net/sword/package/Binary',
+                                    col_iri = col_iri, 
+                                    in_progress=True, 
+                                    metadata_entry=None)
+        # Now to GET that resource with no prescribed for packaging
+        content = conn.get_resource(dr.cont_iri)
+        # This will error out
+        # Can't guarantee that sss.py won't mangle submissions, so can't validate response at this moment
+        
+    def test_13_Invalid_Packaging_cached_receipt(self):
+        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", 
+                          download_service_document=True, honour_receipts=True)
+        col_iri = conn.sd.workspaces[0][1][0].href  # pick the first collection
+        location, dr = conn.create_resource(payload = "Payload is just a load of text", 
+                                    mimetype = "text/plain", 
+                                    filename = "readme.txt", 
+                                    packaging = 'http://purl.org/net/sword/package/Binary',
+                                    col_iri = col_iri, 
+                                    in_progress=True, 
+                                    metadata_entry=None)
+        # Now to GET that resource with invalid packaging
+        try:
+            content = conn.get_resource(dr.cont_iri, packaging="foofar")
+            assert 1 == 0   # fail
+        except PackagingFormatNotAvailable:
+            # test the 'honour_receipts' flag and cached deposit 
+            pass

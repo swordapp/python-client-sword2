@@ -21,7 +21,16 @@ class Deposit_Receipt(object):
         self.edit = None
         self.edit_media = None
         self.alternate = None
-        self.sword_add = None
+        self.se_iri = None 
+        # Atom convenience attribs
+        self.title = None
+        self.id = None
+        self.updated = None
+        self.summary = None
+        
+        self.packaging = []
+        self.content = {}
+        self.cont_iri = None
         self.handle_metadata()
     
     def handle_metadata(self):
@@ -30,6 +39,7 @@ class Deposit_Receipt(object):
                 if str(e.tag).startswith(prefix % ""):
                     _, tagname = e.tag.rsplit("}", 1)
                     field = "%s_%s" % (nmsp, tagname)
+                    d_l.debug("Attempting to intepret field: '%s'" % field)
                     if field == "atom_link":
                         self.handle_link(e)
                     elif field == "atom_content":
@@ -40,7 +50,17 @@ class Deposit_Receipt(object):
                                 e.text = ""
                             e.text += " %s:\"%s\"" % (ak, av)
                         self.metadata[field] = e.text.strip()
+                    elif field == "sword_packaging":
+                        self.packaging.append(e.text)
                     else:
+                        if field == "atom_title":
+                            self.title = e.text
+                        if field == "atom_id":
+                            self.id = e.text
+                        if field == "atom_updated":
+                            self.updated = e.text
+                        if field == "atom_summary":
+                            self.summary = e.text
                         if self.metadata.has_key(field):
                             if isinstance(self.metadata[field], list):
                                 self.metadata[field].append(e.text)
@@ -58,7 +78,7 @@ class Deposit_Receipt(object):
             elif rel == "edit-media":
                 self.edit_media = e.attrib.get('href', None)
             elif rel == "http://purl.org/net/sword/terms/add":
-                self.sword_add = e.attrib.get('href', None)
+                self.se_iri = e.attrib.get('href', None)
             elif rel == "alternate":
                 self.alternate = e.attrib.get('href', None)
             else:            
@@ -74,7 +94,14 @@ class Deposit_Receipt(object):
         
     def handle_content(self, e):
         # TODO handle atom:content 
-        pass
+        # eg <content type="application/zip" src="http://swordapp.org/cont-IRI/43/my_deposit"/>
+        if e.attrib.has_key("src"):
+            src = e.attrib['src']
+            info = dict(e.attrib).copy()
+            del info['src']
+            self.content[src] = info
+            self.cont_iri = src
+            
     
     def __str__(self):
         _s = []
@@ -84,8 +111,10 @@ class Deposit_Receipt(object):
             _s.append("Edit IRI: %s" % self.edit)
         if self.edit_media:
             _s.append("Edit-Media IRI: %s" % self.edit_media)
-        if self.sword_add:
-            _s.append("SWORD2 Add IRI: %s" % self.sword_add)
+        if self.se_iri:
+            _s.append("SWORD2 Add IRI: %s" % self.se_iri)
+        if self.packaging:
+            _s.append("SWORD2 Package formats available: %s" % self.packaging)
         if self.alternate:
             _s.append("Alternate IRI: %s" % self.alternate)
         for k, v in self.links.iteritems():
