@@ -1,6 +1,6 @@
 from . import TestController
 
-from sword2.collection import Entry
+from sword2 import Entry
 from sword2.utils import NS
 
 class TestEntry(TestController):

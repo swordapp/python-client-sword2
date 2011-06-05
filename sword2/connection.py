@@ -85,6 +85,7 @@ from transaction_history import Transaction_History
 from service_document import ServiceDocument
 from deposit_receipt import Deposit_Receipt
 from error_document import Error_Document
+from collection import Sword_Statement
 from exceptions import *
 
 from compatible_libs import etree
@@ -118,7 +119,7 @@ class Connection(object):
         self.raise_except = error_response_raises_exceptions
         
         self.keep_cache = cache_deposit_receipts
-        self.h = httplib2.Http()
+        self.h = httplib2.Http(".cache", timeout=30.0)
         self.user_name = user_name
         self.on_behalf_of = on_behalf_of
         
@@ -237,48 +238,44 @@ class Connection(object):
         
     def reset_transaction_history(self):
         self.history = Transaction_History()
-    
-    def create_resource(self, 
-                        workspace=None,     # Either provide workspace/collection or
-                        collection=None,    # the exact Col-IRI itself
-                        col_iri=None,  
+
+    def _make_request(self,
+                      target_iri, 
+                      payload=None,       # These need to be set to upload a file
+                      mimetype=None,      
+                      filename=None,
+                      packaging=None,
                         
-                        payload=None,       # These need to be set to upload a file
-                        mimetype=None,      
-                        filename=None,
-                        packaging=None,
-                        
-                        metadata_entry=None,  # a sword2.Entry needs to be here, if 
+                      metadata_entry=None,  # a sword2.Entry needs to be here, if 
                                               # a metadata entry is to be uploaded
                         
-                        # Set both a file and a metadata entry for the method to perform a multipart
-                        # related upload.
-                        
-                        suggested_identifier=None,
-                        in_progress=True,
-                        ):
-        if not col_iri:
-            for w, collections in self.workspaces:
-                if w == workspace:
-                    for c in collections:
-                        if c.title == collection:
-                            conn_l.debug("Matched: Workspace='%s', Collection='%s' ==> Col-IRI='%s'" % (workspace, 
-                                                                                                        collection, 
-                                                                                                        c.href))
-                            col_iri = c.href
-                            break
-
-        if not col_iri:   # no col_iri provided and no valid workspace/collection given
-            coll_l.error("No suitable Col-IRI was found, with the given parameters.")
-            return
+                      # Set both a file and a metadata entry for the method to perform a multipart
+                      # related upload.
+                      suggested_identifier=None,   # 'slug'
+                      in_progress=True,
+                      on_behalf_of=None,
+                      metadata_relevant=False,
+                      
+                      # flags:
+                      empty = None,     # If this is True, then the POST/PUT is sent with an empty body
+                                        # and the 'Content-Length' header explicitly set to 0
+                      method = "POST",
+                      request_type=""       # text label for transaction history reports
+                      ):
         if payload:
             md5sum, f_size = get_md5(payload)
         
         # request-level headers
         headers = {}
         headers['In-Progress'] = str(in_progress).lower()
-        if self.on_behalf_of:
+        if on_behalf_of:
             headers['On-Behalf-Of'] = self.on_behalf_of
+        elif self.on_behalf_of:
+            headers['On-Behalf-Of'] = self.on_behalf_of
+            
+        if suggested_identifier:
+            headers['Slug'] = str(suggested_identifier)
+            
         if suggested_identifier:
             headers['Slug'] = str(suggested_identifier)
         
@@ -289,19 +286,45 @@ class Connection(object):
             # In the meantime, read the file into memory... *sigh*
             payload = payload.read()
         
-        self._t.start("Col_IRI create new resource")
-        if metadata_entry and not (filename and payload):
+        self._t.start(request_type)
+        if empty:
+            # NULL body with explicit zero length.
+            headers['Content-Length'] = "0"
+            resp, content = self.h.request(target_iri, method, headers=headers)
+            _, took_time = self._t.time_since_start(request_type)
+            if self.history:
+                self.history.log(request_type + ": Empty request", 
+                                 sd_iri = self.sd_iri,
+                                 target_iri = target_iri,
+                                 method = method,
+                                 response = resp,
+                                 headers = headers,
+                                 process_duration = took_time)  
+        elif method == "DELETE":
+            resp, content = self.h.request(target_iri, method, headers=headers)
+            _, took_time = self._t.time_since_start(request_type)
+            if self.history:
+                self.history.log(request_type + ": DELETE request", 
+                                 sd_iri = self.sd_iri,
+                                 target_iri = target_iri,
+                                 method = method,
+                                 response = resp,
+                                 headers = headers,
+                                 process_duration = took_time)
+            
+        elif metadata_entry and not (filename and payload):
             # Metadata-only resource creation
             headers['Content-Type'] = "application/atom+xml;type=entry"
             data = str(metadata_entry)
             headers['Content-Length'] = str(len(data))
             
-            resp, content = self.h.request(col_iri, "POST", headers=headers, body = data)
-            _, took_time = self._t.time_since_start("Col_IRI create new resource")
+            resp, content = self.h.request(target_iri, method, headers=headers, body = data)
+            _, took_time = self._t.time_since_start(request_type)
             if self.history:
-                self.history.log('Col_IRI Metadata POST', 
+                self.history.log(request_type + ": Metadata-only resource request", 
                                  sd_iri = self.sd_iri,
-                                 col_iri = col_iri,
+                                 target_iri = target_iri,
+                                 method = method,
                                  response = resp,
                                  headers = headers,
                                  process_duration = took_time)
@@ -324,14 +347,15 @@ class Connection(object):
                                                                    
             headers['Content-Type'] = multicontent_type + '; type="application/atom+xml"'
             headers['Content-Length'] = str(len(payload_data))    # must be str, not int type
-            resp, content = self.h.request(col_iri, "POST", headers=headers, body = payload_data)
-            _, took_time = self._t.time_since_start("Col_IRI create new resource")
+            resp, content = self.h.request(target_iri, method, headers=headers, body = payload_data)
+            _, took_time = self._t.time_since_start(request_type)
             if self.history:
-                self.history.log('Col_IRI Multipart POST', 
+                self.history.log(request_type + ": Multipart resource request",
                                  sd_iri = self.sd_iri,
-                                 col_iri = col_iri,
+                                 target_iri = target_iri,
                                  response = resp,
                                  headers = headers,
+                                 method = method,
                                  multipart = [{'key':'atom',
                                                'type':'application/atom+xml; charset="utf-8"'
                                               },
@@ -350,12 +374,13 @@ class Connection(object):
             headers['Content-Disposition'] = "attachment; filename=%s" % filename   # TODO: ensure filename is ASCII
             headers['Packaging'] = str(packaging)
             
-            resp, content = self.h.request(col_iri, "POST", headers=headers, body = payload)
-            _, took_time = self._t.time_since_start("Col_IRI create new resource")
+            resp, content = self.h.request(target_iri, method, headers=headers, body = payload)
+            _, took_time = self._t.time_since_start(request_type)
             if self.history:
-                self.history.log('Col_IRI POST', 
+                self.history.log(request_type + ": simple resource request",
                                  sd_iri = self.sd_iri,
-                                 col_iri = col_iri,
+                                 target_iri = target_iri,
+                                 method = method,
                                  response = resp,
                                  headers = headers,
                                  process_duration = took_time)
@@ -379,24 +404,197 @@ class Connection(object):
                 return (location, d)
             else:
                 return (location, None)
-        elif resp['status'] == "401":
-            conn_l.error("You are unauthorised (401) to access this document on the server. Check your username/password credentials and your 'On Behalf Of'")
-            raise NotAuthorised(resp)
-        elif resp['status'] == "403":
-            conn_l.error("You are Forbidden (401) to POST to '%s'. Check your username/password credentials and your 'On Behalf Of'")
-            raise Forbidden(resp)
-        elif resp['status'] == "408":
-            conn_l.error("Request Timeout (408) - error uploading.")
-            raise RequestTimeOut(resp)
-        elif int(resp['status']) > 499:
-            conn_l.error("Error occured. Response headers from the server:\n%s" % resp)
-            raise ServerError(resp)
+        elif resp['status'] == "204":
+            #   Deposit receipt in content
+            conn_l.info("Received a valid 'No Content' (204) response.")
+            # Check response headers for updated Locatio
+            return (True, True)
+        elif resp['status'] == "200":
+            #   Deposit receipt in content
+            conn_l.info("Received a valid (200) OK response.")
+            content_type = resp.get('content-type')
+            if content_type == "application/atom+xml;type=entry" and len(content) > 0:
+                d = Deposit_Receipt(content)
+                if d.parsed:
+                    conn_l.info("Server response included a Deposit Receipt. Caching a copy in .resources['%s']" % d.edit)
+                    self._cache_deposit_receipt(d)
+                    return (d.edit, d)
+            return (True, True)
         else:
-            conn_l.error("Error occured. Response headers from the server:\n%s" % resp)
-            raise HTTPResponseError(resp)
+            return self._handle_error_response(resp, content)
+        
 
-    def get_resource(self, content_iri,
-                           packaging=None):
+    
+    def create_resource(self, 
+                        workspace=None,     # Either provide workspace/collection or
+                        collection=None,    # the exact Col-IRI itself
+                        col_iri=None,  
+                        
+                        payload=None,       # These need to be set to upload a file
+                        mimetype=None,      
+                        filename=None,
+                        packaging=None,
+                        
+                        metadata_entry=None,  # a sword2.Entry needs to be here, if 
+                                              # a metadata entry is to be uploaded
+                        
+                        # Set both a file and a metadata entry for the method to perform a multipart
+                        # related upload.
+                        
+                        suggested_identifier=None,
+                        in_progress=True,
+                        on_behalf_of=None
+                        ):
+        
+        conn_l.debug("Create Resource")
+        if not col_iri:
+            for w, collections in self.workspaces:
+                if w == workspace:
+                    for c in collections:
+                        if c.title == collection:
+                            conn_l.debug("Matched: Workspace='%s', Collection='%s' ==> Col-IRI='%s'" % (workspace, 
+                                                                                                        collection, 
+                                                                                                        c.href))
+                            col_iri = c.href
+                            break
+
+        if not col_iri:   # no col_iri provided and no valid workspace/collection given
+            coll_l.error("No suitable Col-IRI was found, with the given parameters.")
+            return
+        
+        return self._make_request(target_iri = col_iri,
+                                  payload=payload,
+                                  mimetype=mimetype,
+                                  filename=filename,
+                                  packaging=packaging,
+                                  metadata_entry=metadata_entry,
+                                  suggested_identifier=None,
+                                  in_progress=True,
+                                  on_behalf_of=on_behalf_of,
+                                  method="POST",
+                                  request_type='Col_IRI POST')
+        
+    def update_resource(self, 
+                        edit_media_iri,  
+                        
+                        payload,       # These need to be set to upload a file      
+                        filename,      # According to spec, "The client MUST supply a Content-Disposition header with a filename parameter 
+                                       #                     (note that this requires the filename be expressed in ASCII)."
+                        mimetype=None,
+                        packaging=None,
+                        on_behalf_of=None,
+                        in_progress=False, 
+                        metadata_relevant=False
+                        ):
+        conn_l.info("Update Resource via Edit-Media-IRI %s" % edit_media_iri)
+        return self._make_request(target_iri = edit_media_iri,
+                                  payload=payload,
+                                  mimetype=mimetype,
+                                  filename=filename,
+                                  in_progress=in_progress, 
+                                  packaging=packaging,
+                                  on_behalf_of=on_behalf_of,
+                                  method="PUT",
+                                  metadata_relevant=metadata_relevant,
+                                  request_type='EM_IRI PUT')
+
+    def update_metadata_for_resource(self, edit_iri,
+                                           metadata_entry,    # required
+                                           in_progress=False,
+                                           on_behalf_of=None
+                                           ):
+        conn_l.info("Update Resource via Edit-IRI %s" % edit_iri)
+        return self._make_request(target_iri = edit_iri,
+                                  metadata_entry=metadata_entry,
+                                  on_behalf_of=on_behalf_of,
+                                  in_progress=in_progress, 
+                                  method="PUT",
+                                  request_type='Edit_IRI PUT')
+        
+    def add_file_to_resource(self, 
+                        edit_media_iri,  
+                        
+                        payload,       # These need to be set to upload a file      
+                        filename,      # According to spec, "The client MUST supply a Content-Disposition header with a filename parameter 
+                                       #                     (note that this requires the filename be expressed in ASCII)."
+                        mimetype=None,
+                        on_behalf_of=None,
+                        in_progress=False, 
+                        metadata_relevant=False
+                        ):
+        conn_l.info("Appending file to a deposit via Edit-Media-IRI %s" % edit_media_iri)
+        return self._make_request(target_iri = edit_media_iri,
+                                  payload=payload,
+                                  mimetype=mimetype,
+                                  filename=filename,
+                                  on_behalf_of=on_behalf_of,
+                                  method="POST",
+                                  metadata_relevant=metadata_relevant,
+                                  request_type='EM_IRI POST (APPEND)')
+
+    def add_new_item_to_container(self, 
+                        se_iri,  
+                        
+                        payload=None,       # These need to be set to upload a file      
+                        filename=None,      # According to spec, "The client MUST supply a Content-Disposition header with a filename parameter 
+                                       #                     (note that this requires the filename be expressed in ASCII)."
+                        mimetype=None,
+                        packaging=None,
+                        on_behalf_of=None,
+                        metadata_entry=None,
+                        metadata_relevant=False,
+                        in_progress=False
+                        ):
+        conn_l.info("Adding new file, metadata or both to a SWORD deposit via SWORD-Edit-IRI %s" % se_iri)
+        return self._make_request(target_iri = se_iri,
+                                  payload=payload,
+                                  mimetype=mimetype,
+                                  packaging=packaging,
+                                  filename=filename,
+                                  metadata_entry=metadata_entry,
+                                  on_behalf_of=on_behalf_of,
+                                  in_progress=in_progress, 
+                                  method="POST",
+                                  metadata_relevant=metadata_relevant,
+                                  request_type='SE_IRI POST (APPEND PKG)')
+
+
+    def delete_resource(self,
+                        resource_iri,
+                        on_behalf_of=None):
+        conn_l.info("Deleting resource %s" % resource_iri)
+        return self._make_request(target_iri = resource_iri,
+                                  on_behalf_of=on_behalf_of,
+                                  method="DELETE",
+                                  request_type='IRI DELETE')
+
+    def complete_deposit(self,
+                        se_iri,
+                        on_behalf_of=None):
+        conn_l.info("Completeing the deposit of %s (Edit-Media-IRI)" % se_iri)
+        return self._make_request(target_iri = se_iri,
+                                  on_behalf_of=on_behalf_of,
+                                  in_progress=False,
+                                  method="POST",
+                                  empty=True,
+                                  request_type='SE_IRI Complete Deposit')
+
+    def get_atom_sword_statement(self, sword_statement_iri):
+        # get the statement first
+        conn_l.debug("Trying to GET the ATOM Sword Statement at %s." % sword_statement_iri)
+        response = self.get_resource(sword_statement_iri, headers = {'Accept':'application/atom+xml;type=feed'})
+        if response.resp:
+            #try:
+            if True:
+                conn_l.debug("Attempting to parse the response as a ATOM Sword Statement")
+                s = Sword_Statement(response.content)
+                conn_l.debug("Parsed SWORD2 Statement, returning")
+                return s
+            #except Exception, e:
+            #    # Any error here is to do with the parsing
+            #    return response.content
+
+    def get_resource(self, content_iri, packaging=None, on_behalf_of=None, headers = {}):
         # 406 - PackagingFormatNotAvailable
         if self.honour_receipts and packaging:
             # Make sure that the packaging format is available from the deposit receipt, if loaded
@@ -405,20 +603,21 @@ class Connection(object):
             if content_iri in self.cont_iris.keys():
                 if not (packaging in self.cont_iris[content_iri].packaging):
                     conn_l.error("Desired packaging format '%' not available from the server, according to the deposit receipt. Change the client parameter 'honour_receipts' to False to avoid this check.")
-                    raise PackagingFormatNotAvailable()
-        headers = {}
-        if self.on_behalf_of:
+                    return self._return_error_or_exception(PackagingFormatNotAvailable, {}, "")
+        if on_behalf_of:
+            headers['On-Behalf-Of'] = self.on_behalf_of
+        elif self.on_behalf_of:
             headers['On-Behalf-Of'] = self.on_behalf_of
         if packaging:
             headers['Accept-Packaging'] = packaging
         
-        self._t.start("Cont_IRI GET resource")
+        self._t.start("IRI GET resource")
         if packaging:
-            conn_l.info("Cont_IRI GET resource '%s' with Accept-Packaging:%s" % (content_iri, packaging))
+            conn_l.info("IRI GET resource '%s' with Accept-Packaging:%s" % (content_iri, packaging))
         else:
-            conn_l.info("Cont_IRI GET resource '%s'" % content_iri)
+            conn_l.info("IRI GET resource '%s'" % content_iri)
         resp, content = self.h.request(content_iri, "GET", headers=headers)
-        _, took_time = self._t.time_since_start("Cont_IRI GET resource")
+        _, took_time = self._t.time_since_start("IRI GET resource")
         if self.history:
             self.history.log('Cont_IRI GET resource', 
                              sd_iri = self.sd_iri,
@@ -432,22 +631,15 @@ class Connection(object):
         conn_l.debug(resp)
         if resp['status'] == '200':
             conn_l.debug("Cont_IRI GET resource successful - got %s bytes from %s" % (len(content), content_iri))
-            return content
+            class ContentWrapper(object):
+                def __init__(self, resp, content):
+                    self.resp = resp
+                    self.content = content
+                    self.code = resp.status
+            return ContentWrapper(resp, content)
         elif resp['status'] == '408':   # Unavailable packaging format 
             conn_l.error("Desired packaging format '%' not available from the server.")
-            raise PackagingFormatNotAvailable()
-        elif resp['status'] == "401":
-            conn_l.error("You are unauthorised (401) to access this document on the server. Check your username/password credentials and your 'On Behalf Of'")
-            raise NotAuthorised(resp)
-        elif resp['status'] == "403":
-            conn_l.error("You are Forbidden (401) to POST to '%s'. Check your username/password credentials and your 'On Behalf Of'")
-            raise Forbidden(resp)
-        elif resp['status'] == "408":
-            conn_l.error("Request Timeout (408) - error uploading.")
-            raise RequestTimeOut(resp)
-        elif int(resp['status']) > 499:
-            conn_l.error("Error occured. Response headers from the server:\n%s" % resp)
-            raise ServerError(resp)
+            return self._return_error_or_exception(PackagingFormatNotAvailable, resp, content)
         else:
-            conn_l.error("Error occured. Response headers from the server:\n%s" % resp)
-            raise HTTPResponseError(resp)
+            return self._handle_error_response(resp, content)
+

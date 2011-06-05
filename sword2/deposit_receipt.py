@@ -4,22 +4,29 @@
 from sword2_logging import logging
 d_l = logging.getLogger(__name__)
 
+from atom_objects import Category
+
 from compatible_libs import etree
 from utils import NS, get_text
 
 class Deposit_Receipt(object):
-    def __init__(self, xml_deposit_receipt):
+    def __init__(self, xml_deposit_receipt=None, dom=None):
         self.parsed = False
-        try:
-            self.dom = etree.fromstring(xml_deposit_receipt)
+        if xml_deposit_receipt:
+            try:
+                self.dom = etree.fromstring(xml_deposit_receipt)
+                self.parsed = True
+            except Exception, e:
+                d_l.error("Was not able to parse the deposit receipt as XML.")
+                return
+        elif dom != None:
+            self.dom = dom
             self.parsed = True
-        except Exception, e:
-            d_l.error("Was not able to parse the deposit receipt as XML.")
-            return
         self.metadata = {}
         self.links = {}
         self.edit = None
         self.edit_media = None
+        self.edit_media_feed = None
         self.alternate = None
         self.se_iri = None 
         # Atom convenience attribs
@@ -29,6 +36,7 @@ class Deposit_Receipt(object):
         self.summary = None
         
         self.packaging = []
+        self.categories = []
         self.content = {}
         self.cont_iri = None
         self.handle_metadata()
@@ -61,6 +69,8 @@ class Deposit_Receipt(object):
                             self.updated = e.text
                         if field == "atom_summary":
                             self.summary = e.text
+                        if field == "atom_category":
+                            self.categories.append(Category(dom=e))
                         if self.metadata.has_key(field):
                             if isinstance(self.metadata[field], list):
                                 self.metadata[field].append(e.text)
@@ -76,20 +86,25 @@ class Deposit_Receipt(object):
             if rel == "edit":
                 self.edit = e.attrib.get('href', None)
             elif rel == "edit-media":
-                self.edit_media = e.attrib.get('href', None)
+                # only put the edit-media iri in the convenience attribute if
+                # there is no 'type'
+                if not ('type' in e.attrib.keys()):
+                    self.edit_media = e.attrib.get('href', None)
+                elif e.attrib['type'] == "application/atom+xml;type=feed":
+                    self.edit_media_feed = e.attrib.get('href', None)
             elif rel == "http://purl.org/net/sword/terms/add":
                 self.se_iri = e.attrib.get('href', None)
             elif rel == "alternate":
                 self.alternate = e.attrib.get('href', None)
-            else:            
-                attribs = {}
-                for k,v in e.attrib.iteritems():
-                    if k != "rel":
-                        attribs[k] = v
-                if self.links.has_key(rel): 
-                    self.links[rel].append(attribs)
-                else:
-                    self.links[rel] = [attribs]            
+            # Put all links into .links attribute, with all element attribs
+            attribs = {}
+            for k,v in e.attrib.iteritems():
+                if k != "rel":
+                    attribs[k] = v
+            if self.links.has_key(rel): 
+                self.links[rel].append(attribs)
+            else:
+                self.links[rel] = [attribs]            
             
         
     def handle_content(self, e):
@@ -102,6 +117,8 @@ class Deposit_Receipt(object):
             self.content[src] = info
             self.cont_iri = src
             
+    def to_xml(self):
+        return etree.tostring(self.dom)
     
     def __str__(self):
         _s = []
@@ -113,6 +130,8 @@ class Deposit_Receipt(object):
             _s.append("Edit-Media IRI: %s" % self.edit_media)
         if self.se_iri:
             _s.append("SWORD2 Add IRI: %s" % self.se_iri)
+        for c in self.categories:
+            _s.append(str(c))
         if self.packaging:
             _s.append("SWORD2 Package formats available: %s" % self.packaging)
         if self.alternate:

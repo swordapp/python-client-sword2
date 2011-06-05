@@ -8,22 +8,19 @@ coll_l = logging.getLogger(__name__)
 from compatible_libs import etree
 from utils import NS, get_text
 
+from deposit_receipt import Deposit_Receipt
+
+from atom_objects import Category
+
 from datetime import datetime
 
-class Category(object):
-    def __init__(self, term=None,
-                       scheme=None,
-                       label=None):
-        self.term = term
-        self.scheme = scheme
-        self.label = label
 
 class SDCollection(object):
     def __init__(self, title=None, 
                        href=None,
                        accept=[], 
                        accept_multipart=[], 
-                       # TODO: categories=[],
+                       categories=[],
                        collectionPolicy=None,
                        description = None,
                        mediation=None,
@@ -42,7 +39,7 @@ class SDCollection(object):
         self.collectionPolicy = collectionPolicy
         self.acceptPackaging = acceptPackaging
         self.service = service
-        # TODO Categories
+        self.categories = categories
     
     def _reset(self):
         self.title = None
@@ -56,6 +53,7 @@ class SDCollection(object):
         self.collectionPolicy = None
         self.acceptPackaging = []
         self.service = None
+        self.categories = []
     
     def load_from_etree(self, collection):
         self._reset()
@@ -68,8 +66,9 @@ class SDCollection(object):
                 self.accept_multipart.append(accept.text)
             else:
                 self.accept.append(accept.text)
-        # TODO categories
-            
+        # Categories
+        for category_element in collection.findall(NS['atom'] % 'category'):
+            self.categories.append(Category(dom=category_element))
         # SWORD extensions:
         self.collectionPolicy = get_text(collection, NS['sword'] % 'collectionPolicy')
                 
@@ -99,6 +98,8 @@ class SDCollection(object):
             _s.append("SWORD: Accept Packaging: '%s'" % self.acceptPackaging)
         if self.service:
             _s.append("SWORD: Nested Service Documents - '%s'" % self.service)
+        for c in self.categories:
+            _s.append(str(c))
         return "\n".join(_s)
 
     def to_json(self):
@@ -113,7 +114,8 @@ class SDCollection(object):
                   'treatment':self.treatment,
                   'collectionPolicy':self.collectionPolicy,
                   'acceptPackaging':self.acceptPackaging,
-                  'service':self.service}
+                  'service':self.service,
+                  'categories':self.categories}
             return json.dumps(_j)
         else:
             coll_l.error("Could not return information about Collection '%s' as JSON" % self.title)
@@ -125,81 +127,30 @@ class Collection_Feed(object):
         self._cached = []
         self.h = http_client
         
-class Collection_Feed_Document(object):
+class Sword_Statement(object):
     def __init__(self, xml_document):
         self.xml_document = xml_document
         self.first = None
         self.next = None
         self.previous = None
         self.last = None
+        self.categories = []
         self.entries = []
         try:
             coll_l.info("Attempting to parse the Feed XML document")
             self.feed = etree.fromstring(xml_document)
-            self.enumerate_feed()
         except Exception, e:
             coll_l.error("Failed to parse document")
             coll_l.error("XML document begins:\n %s" % xml_document[:300])
+        self.enumerate_feed()
 
     def enumerate_feed(self):
-        pass
-
-class Entry(object):
-    """Used to create Entrys - for multipart/metadata submission"""
-    atom_fields = ['title','id','updated','summary']
-    add_ns = ['dcterms']
-    bootstrap = """<?xml version="1.0"?>
-<entry xmlns="http://www.w3.org/2005/Atom"
-        xmlns:dcterms="http://purl.org/dc/terms/">
-    <generator uri="http://bitbucket.org/beno/python-sword2" version="%s"/>
-</entry>""" % __version__
-    def __init__(self, **kw):
-        self.entry = etree.fromstring(self.bootstrap)
-        if not 'updated' in kw.keys():
-            kw['updated'] = datetime.now().isoformat()
-        self.add_fields(**kw)
-    
-    def register_namespace(self, prefix, uri):
-        etree.register_namespace(prefix, uri)
-        self.add_ns.append(prefix)
-        if prefix not in NS.keys():
-            NS[prefix] = "{%s}%%s" % uri
+        # Handle Categories
+        for cate in self.feed.findall(NS['atom'] % 'category'):
+            self.categories.append(Category(dom = cate))
+        # handle entries - each one is compatible with a Deposit receipt, so using that
+        for entry in self.feed.findall(NS['atom'] % 'entry'):
+            self.entries.append(Deposit_Receipt(dom=entry))
+        # TODO handle multipage first/last pagination
             
-    def add_field(self, k, v):
-        if k in self.atom_fields:
-            # These should be unique!
-            old_e = self.entry.find(NS['atom'] % k)
-            if old_e == None:
-                e = etree.SubElement(self.entry, NS['atom'] % k)
-                e.text = v
-            else:
-                old_e.text = v
-        elif "_" in k:
-            # possible XML namespace, eg 'dcterms_title'
-            nmsp, tag = k.split("_", 1)
-            if nmsp in self.add_ns:
-                e = etree.SubElement(self.entry, NS[nmsp] % tag)
-                e.text = v
-        elif k == "author" and isinstance(v, dict):
-            self.add_author(**v)
 
-    def add_fields(self, **kw):
-        for k,v in kw.iteritems():
-            self.add_field(k,v)
-
-    def add_author(self, name, uri=None, email=None):
-        a = etree.SubElement(self.entry, NS['atom'] % 'author')
-        n = etree.SubElement(a, NS['atom'] % 'name')
-        n.text = name
-        if uri:
-            u = etree.SubElement(a, NS['atom'] % 'uri')
-            u.text = uri
-        if email:
-            e = etree.SubElement(a, NS['atom'] % 'email')
-            e.text = email
-
-    def __str__(self):
-        return etree.tostring(self.entry)
-        
-    def pretty_print(self):
-        return etree.tostring(self.entry, pretty_print=True)

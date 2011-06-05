@@ -7,6 +7,8 @@ utils_l = logging.getLogger(__name__)
 from time import time
 from datetime import datetime
 
+from base64 import b64encode
+
 try:
     from hashlib import md5
 except ImportError:
@@ -133,8 +135,13 @@ def create_multipart_related(payloads):
                 body.append("%s: %s" % (f, v))     # TODO force ASCII?
         
         body.append('MIME-Version: 1.0')
-        body.append('')
-        body.append(payload['data'])
+        if payload['key'] == 'payload':
+            body.append('Content-Transfer-Encoding: base64')
+            body.append('')
+            body.append(b64encode(payload['data']))
+        else:
+            body.append('')
+            body.append(payload['data'])
     body.append('--' + BOUNDARY + '--')
     body.append('')
     body_bytes = CRLF.join(body)
