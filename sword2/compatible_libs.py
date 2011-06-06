@@ -1,6 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""
+Provides the module with access to certain libraries that have more than one suitable implementation, in a optimally
+degredating manner.
+
+Provides - `etree` and `json`
+
+`etree` can be from any of the following, if found in the local environment:
+    `lxml`
+    `xml.etree`
+    `elementtree`
+    `cElementTree`
+
+`json` can be from any of the following:
+    `json` (python >= 2.6)
+    `simplejson`
+    
+If no suitable library is found, then it will pass back `None`
+"""
+
 from sword2_logging import logging 
 
 cl_l = logging.getLogger(__name__)
