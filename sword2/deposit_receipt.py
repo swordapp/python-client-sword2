@@ -1,6 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""
+This module provides `Deposit_Receipt`, a convenient class for extracting information from the Deposit Receipts sent back by the 
+SWORD2-compliant server for many transactions.
+
+#BETASWORD2URL
+See Section 10. Deposit Receipt: http://sword-app.svn.sourceforge.net/viewvc/sword-app/spec/trunk/SWORDProfile.html?revision=HEAD#depositreceipt
+
+"""
+
 from sword2_logging import logging
 d_l = logging.getLogger(__name__)
 
@@ -11,6 +20,80 @@ from utils import NS, get_text
 
 class Deposit_Receipt(object):
     def __init__(self, xml_deposit_receipt=None, dom=None):
+        """
+`Deposit_Receipt` - provides convenience methods for extracting information from the Deposit Receipts sent back by the 
+SWORD2-compliant server for many transactions.
+
+#BETASWORD2URL
+See Section 10. Deposit Receipt: http://sword-app.svn.sourceforge.net/viewvc/sword-app/spec/trunk/SWORDProfile.html?revision=HEAD#depositreceipt
+
+Transactions carried out by `sword2.Connection` will return a `Deposit_Receipt` object, if a deposit receipt document is sent back by the server.
+
+Usage:
+    
+>>> from sword2 import Deposit_Receipt
+
+.... get the XML text for a Deposit Receipt in the variable `doc`
+
+# Parse the response:
+>>> dr = Deposit_Receipt(xml_deposit_receipt = doc)
+
+# Check that the response is parsable (valid XML) and is SWORD2-compliant
+>>> assert dr.parsed == True
+>>> assert dr.valid == True
+
+Availible attributes:
+    
+    Atom convenience attribs -- corresponds to (type of object that is held)
+    `self.title`            -- <atom:title>   (`str`)
+    `self.id`               -- <id>           (`str`)
+    `self.updated`          -- <updated>      (`str`)
+    `self.summary`          -- <atom:summary> (`str`)
+    `self.categories`       -- <category>     (`list` of `sword2.Category`)
+        
+    IRI/URIs
+    `self.edit`             -- The Edit-IRI         (`str`)
+                                <link rel="edit">
+    `self.edit_media`       -- The Edit-Media-IRI   (`str`)
+                                <link rel="edit-media">
+    `self.edit_media_feed`  -- The Edit-Media-IRI [Atom Feed]  (`str`)
+                                <link rel="edit-media" type="application/atom+xml;type=feed">
+    `self.alternate`        -- A link which, according to the spec,                     (`str`)
+                               "points to the splash page of the item on the server"
+    `self.se_iri`           -- The SWORD2 Edit IRI (SE-IRI), defined by                 (`str`)
+                                <link rel="http://purl.org/net/sword/terms/add"> 
+                                which MAY be the same as the Edit-IRI
+
+    `self.cont_iri`         -- The Content-IRI     (`str`)
+                                eg `src` from <content type="application/zip" src="http://swordapp.org/cont-IRI/43/my_deposit"/>
+    `self.content`          -- All Content-IRIs    (`dict` with the src or Content-IRI as the key, with a `dict` of the other attributes as its value
+    
+    `self.links`            -- All links elements in a `dict`, with the 'rel' value being used as its key. The values of this are `list`s 
+                                with a `dict` of attributes for each item, corresponding to the information in a single <link> element.
+                                
+                                SWORD2 links for "http://purl.org/net/sword/terms/originalDeposit" and "http://purl.org.net/sword/terms/derivedResource"
+                                are to be found in `self.links`
+                                
+                                eg
+                                >>> dr.links.get("http://purl.org.net/sword/terms/derivedResource")
+                                {'href': "....", 'type':'application/pdf'}
+    
+
+    General metadata:
+    `self.metadata`         -- Simple metadata access. 
+                                A `dict` where the keys are equivalent to the prefixed element names, with an underscore(_) replacing the colon (:)
+                                eg "<dcterms:title>" in the deposit receipt would be accessible in this attribute, under
+                                the key of 'dcterms_title'
+                                
+                                eg
+                                >>> dr.metadata.get("dcterms_title")
+                                "The Origin of Species"
+                                
+                                >>> dr.metadata.get("dcterms_madeupelement")
+                                `None`
+    
+    `self.packaging`        -- sword:packaging elements declaring the formats that the Media Resource can be retrieved in   (`list` of `str`)
+    """
         self.parsed = False
         if xml_deposit_receipt:
             try:
@@ -42,6 +125,7 @@ class Deposit_Receipt(object):
         self.handle_metadata()
     
     def handle_metadata(self):
+        """Method that walks the `etree.SubElement`, assigning the information to the objects attributes."""
         for e in self.dom.getchildren():
             for nmsp, prefix in NS.iteritems():
                 if str(e.tag).startswith(prefix % ""):
@@ -80,6 +164,7 @@ class Deposit_Receipt(object):
                             self.metadata[field] = e.text
                     
     def handle_link(self, e):
+        """Method that handles the intepreting of <atom:link> element information and placing it into the anticipated attributes."""
         # MUST have rel
         rel = e.attrib.get('rel', None)
         if rel:
@@ -108,7 +193,7 @@ class Deposit_Receipt(object):
             
         
     def handle_content(self, e):
-        # TODO handle atom:content 
+        """Method to intepret the <atom:content> elements."""
         # eg <content type="application/zip" src="http://swordapp.org/cont-IRI/43/my_deposit"/>
         if e.attrib.has_key("src"):
             src = e.attrib['src']
@@ -118,9 +203,14 @@ class Deposit_Receipt(object):
             self.cont_iri = src
             
     def to_xml(self):
+        """Convenience method for outputing the DOM as a (byte)string."""
         return etree.tostring(self.dom)
     
     def __str__(self):
+        """Method for producing a human-readable report about the information in this object, suitable
+        for CLI or other logging.
+        
+        NB does not report all information, just key parts."""
         _s = []
         for k in sorted(self.metadata.keys()):
             _s.append("%s: '%s'" % (k, self.metadata[k]))

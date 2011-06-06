@@ -1,5 +1,6 @@
 from service_document import ServiceDocument
 from collection import SDCollection, Collection_Feed, Sword_Statement
+from error_document import Error_Document
 from connection import Connection
 from transaction_history import Transaction_History
 from exceptions import *

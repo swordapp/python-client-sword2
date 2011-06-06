@@ -2,11 +2,49 @@
 # -*- coding: utf-8 -*-
 
 """
-'Connection' class provides a SWORD2 client for a given service (~= Service Document IRI)
+This module provides the 'Connection' class, a SWORD2 client.
+
+#BETASWORD2URL
+See http://sword-app.svn.sourceforge.net/viewvc/sword-app/spec/trunk/SWORDProfile.html?revision=HEAD for information
+about the SWORD2 AtomPub profile.
+ 
+"""
+from sword2_logging import logging
+conn_l = logging.getLogger(__name__)
+
+from utils import Timer, NS, get_md5, create_multipart_related
+
+from transaction_history import Transaction_History
+from service_document import ServiceDocument
+from deposit_receipt import Deposit_Receipt
+from error_document import Error_Document
+from collection import Sword_Statement
+from exceptions import *
+
+from compatible_libs import etree
+
+import httplib2
+
+class Connection(object):
+    """
+`Connection` - SWORD2 client
+
+This connection is predicated on having a Service Document (SD), preferably by an instance being constructed with
+the Service Document IRI (SD-IRI) which can dereference to the XML document itself.
+
+
+Contructor parameters:
+    
+There are a number of flags that can be set when getting an instance of this class that affect the behaviour 
+of the client. See the help for `self.__init__` for more details.
 
 Example usage:
+    
 >>> from sword2 import Connection
->>> conn = Connection("http://example.org/service-doc")  # An SD_IRI is required.
+>>> conn = Connection("http://example.org/service-doc")  # An SD-IRI is required.
+
+
+
 
 # Get, validate and parse the document at the SD_IRI:
 >>> conn.get_service_document()
@@ -74,25 +112,10 @@ valid:   True
 sword_version:   2.0
 workspaces_found:   ['Main Site']
 process_duration:   0.00482511520386
+
+Please see the testsuite for this class for more examples of the sorts of transactions that can be done. (tests/test_connection*.py)
 """
 
-from sword2_logging import logging
-conn_l = logging.getLogger(__name__)
-
-from utils import Timer, NS, get_md5, create_multipart_related
-
-from transaction_history import Transaction_History
-from service_document import ServiceDocument
-from deposit_receipt import Deposit_Receipt
-from error_document import Error_Document
-from collection import Sword_Statement
-from exceptions import *
-
-from compatible_libs import etree
-
-import httplib2
-
-class Connection(object):
     def __init__(self, service_document_iri, 
                        user_name=None,
                        user_pass=None,
@@ -102,6 +125,71 @@ class Connection(object):
                        cache_deposit_receipts=True,
                        honour_receipts=True,
                        error_response_raises_exceptions=True):
+        """
+Creates a new Connection object.
+
+Parameters:
+
+     Connection(service_document_iri,       <--- REQUIRED - use a dummy string here if the SD is local only.
+                
+                # OPTIONAL parameters (default values are shown below)
+                
+                # Authentication parameters:   (can use any method that `httplib2` provides)
+                
+                user_name=None,     
+                user_pass=None,
+                
+                # Set the SWORD2 On Behalf Of value here, for it to be included as part of every transaction
+                # Can be passed to every transaction method (update resource, delete deposit, etc) otherwise
+                
+                on_behalf_of=None,
+                
+                ## Behaviour Flags
+                # Try to GET the service document from the provided SD-IRI in `service_document_iri` if True
+                
+                download_service_document = False,   # Don't automagically GET the SD_IRI by default
+                
+                # Keep a history of all transactions made with the SWORD2 Server
+                # Records details like the response headers, sent headers, times taken and so forth
+                # Kept in a `sword2.transaction_history:Transaction_History` object but can be treated like an ordinary `list`
+                keep_history=True,
+                
+                # Keep a cache of all deposit receipt responses from the server and provide an 'index' to these `sword2.Deposit_Receipt` objects
+                # by Edit-IRI, Content-IRI and Sword-Edit-IRI. (ie given an Edit-IRI, find the deposit receipt for the last received response containing
+                # that IRI.
+                # If the following flag, `honour_receipts` is set to True, packaging checks and other limits set in these receipts will be
+                # honoured.
+                # For example, a request for an item with an invalid packaging type will never reach the server, but throw an exception.
+                
+                cache_deposit_receipts=True,
+                
+                # Make sure to behave as required by the SWORD2 server - not sending too large a file, not asking for invalid packaging types and so on. 
+                
+                honour_receipts=True,
+                
+                # Two means of handling server error responses:
+                #   If set to True - An exception will be thrown from `sword2.exceptions` (caused by any server error response w/ 
+                #      HTTP code greater than or equal to 400)
+                #   OR
+                #   If set to False - A `sword2.error_document:Error_Document` object will be returned.
+                
+                error_response_raises_exceptions=True
+                )
+                
+If a `Connection` is created with the parameter `download_service_document` set to `False`, then no attempt
+to dereference the `service_document_iri` (SD-IRI) will be made at this stage.
+
+To cause it to get or refresh the service document from this IRI, call `self.get_service_document()`
+
+Loading in a locally held Service Document:
+    
+>>> conn = Connection(....)
+
+>>> with open("service_doc.xml", "r") as f:
+...     conn.load_service_document(f.read())
+
+         
+                """
         self.sd_iri = service_document_iri
         self.sd = None
         
@@ -151,6 +239,9 @@ class Connection(object):
             conn_l.debug("Getting service document and dealing with the response: %s s" % self._t.time_since_start("get_service_document")[1])
     
     def _return_error_or_exception(self, cls, resp, content):
+        """Internal method for reporting errors, behaving as the `self.raise_except` flag requires.
+        
+        `self.raise_except` can be altered at any time to affect this methods behaviour."""
         if self.raise_except:
             raise cls(resp)
         else:
@@ -164,6 +255,27 @@ class Connection(object):
                 return e
     
     def _handle_error_response(self, resp, content):
+        """Catch a number of general HTTP error responses from the server, based on HTTP code
+        
+        401 - Unauthorised.
+            Will throw a `sword2.exceptions.NotAuthorised` exception, if exceptions are set to be on.
+            Otherwise will return a `sword2.Error_Document` (likewise for the rest of these)
+        
+        403 - Forbidden.
+            Will throw a `sword2.exceptions.Forbidden` exception
+        
+        404 - Not Found.
+            Will throw a `sword2.exceptions.NotFound` exception
+        
+        408 - Request Timeout
+            Will throw a `sword2.exceptions.RequestTimeOut` exception
+        
+        500-599 errors:
+            Will throw a general `sword2.exceptions.ServerError` exception
+        
+        4XX not listed:
+            Will throw a general `sword2.exceptions.HTTPResponseError` exception
+        """
         if resp['status'] == "401":
             conn_l.error("You are unauthorised (401) to access this document on the server. Check your username/password credentials and your 'On Behalf Of'")
             self._return_error_or_exception(NotAuthorised, resp, content)
@@ -181,6 +293,20 @@ class Connection(object):
             self._return_error_or_exception(HTTPResponseError, resp, content)
     
     def _cache_deposit_receipt(self, d):
+        """Method for storing the deposit receipts, and also for providing lookup dictionaries that
+        reference these objects.
+        
+        (only provides cache if `self.keep_cache` is `True` [via the `cache_deposit_receipts` init parameter flag])
+        
+        Provides and maintains:
+            self.edit_iris -- a `dict`, keys: Edit-IRI hrefs, values: `sword2.Deposit_Receipt` objects they appear in
+            
+            self.cont_iris -- a `dict`, keys: Content-IRI hrefs, values: `sword2.Deposit_Receipt` objects they appear in
+            
+            self.se_iris -- a `dict`, keys: Sword-Edit-IRI hrefs, values: `sword2.Deposit_Receipt` objects they appear in
+            
+            self.cached_at -- a `dict`, keys: Edit-IRIs, values: timestamp when receipt was last cached.
+        """
         if self.keep_cache:
             timestamp = self._t.get_timestamp()
             conn_l.debug("Caching document (Edit-IRI:%s) - at %s" % (d.edit, timestamp))
@@ -191,11 +317,24 @@ class Connection(object):
                 # MUST exist according to the spec, but as it can be the same as the Edit-IRI
                 # it seems likely that a server implementation might ignore the 'MUST' part.
                 self.se_iris[d.se_iri] = d
-            self.cached_at = self._t.get_timestamp()
+            self.cached_at[d.edit] = self._t.get_timestamp()
         else:
             conn_l.debug("Caching request denied - deposit receipt caching is set to 'False'")
     
     def load_service_document(self, xml_document):
+        """Load the Service Document XML from bytestring, `xml_document`
+        
+        Useful if SD-IRI is non-existant or invalid.
+        
+        Will set the following convenience attributes:
+            
+            `self.sd` -- the `sword2.ServiceDocument` instance
+            
+            `self.workspaces` -- a `list` of workspace tuples, of the form:
+                            ('Workspace atom:title', [<`sword2.Collection` object>, ....]),
+            
+            `self.maxUploadSize` -- the maximum filesize for a deposit, if given in the service document
+        """
         self._t.start("SD Parse")
         self.sd = ServiceDocument(xml_document)
         _, took_time = self._t.time_since_start("SD Parse")
@@ -219,6 +358,9 @@ class Connection(object):
                                  process_duration = took_time)
     
     def get_service_document(self):
+        """Perform an HTTP GET on the Service Document IRI (SD-IRI) and attempt to parse the result as
+        a SWORD2 Service Document (using `self.load_service_document`)
+        """
         headers = {}
         if self.on_behalf_of:
             headers['on-behalf-of'] = self.on_behalf_of
@@ -237,6 +379,8 @@ class Connection(object):
             conn_l.error("You are unauthorised (401) to access this document on the server. Check your username/password credentials")
         
     def reset_transaction_history(self):
+        """ Clear the transaction history - `self.history`"""
+        del self.history
         self.history = Transaction_History()
 
     def _make_request(self,
@@ -262,6 +406,41 @@ class Connection(object):
                       method = "POST",
                       request_type=""       # text label for transaction history reports
                       ):
+        """Performs an HTTP request, as defined by the parameters. This is an internally used method and it is best that it
+        is not called directly.
+        
+        target_iri -- IRI that will be the target of the HTTP call
+        
+        # File upload parameters:
+        payload   - the payload to send. Can be either a bytestring or a File-like object that supports `payload.read()`
+        mimetype  - MIMEType of the payload
+        filename  - filename. Most SWORD2 uploads have this as being mandatory.
+        packaging - the SWORD2 packaging type of the payload. 
+                    eg packaging = 'http://purl.org/net/sword/package/Binary'
+        
+        # NB to work around a possible bug in httplib2 0.6.0, the file-like object is read into memory rather than streamed
+        # from disc, so is not as efficient as it should be. That said, it is recommended that file handles are passed to 
+        # the _make_request method, as this is hoped to be a temporary situation.
+        
+        metadata_entry  - a `sword2.Entry` to be uploaded with metadata fields set as desired.
+        
+        # If there is both a payload and a metadata_entry, then the request will be made as a Multipart-related request
+        # Otherwise, it will be a normal request for whicever type of upload.
+        
+        empty   - a flag to specify that an empty request should be made. A blank body and a 'Content-Length:0' header will be explicitly added
+                  and any payload or metadata_entry passed in will be ignored.
+        
+        
+        # Header flags:
+        suggested_identifier    -- set the 'Slug' header
+        in_progress             --         'In-Progress'
+        on_behalf_of            --         'On-Behalf-Of' 
+        metadata_relevant       --         'Metadata-Relevant'
+        
+        # HTTP settings:
+        method          -- "GET", "POST", etc
+        request_type    -- A label to be used in the transaction history for this particular operation. 
+        """
         if payload:
             md5sum, f_size = get_md5(payload)
         
@@ -443,9 +622,110 @@ class Connection(object):
                         
                         suggested_identifier=None,
                         in_progress=True,
-                        on_behalf_of=None
+                        on_behalf_of=None,
                         ):
+        """
+Creating a Resource
+===================
+                
+#BETASWORD2URL
+See 6.3 Creating a Resource http://sword-app.svn.sourceforge.net/viewvc/sword-app/spec/trunk/SWORDProfile.html?revision=HEAD#protocoloperations_creatingresource
+
+Basic parameters:
+
+This method can create a new resource in a Collection on a SWORD2 server, given suitable authentication to do so.
         
+Select a collection to send a request to by either:
+            
+    setting the param `col_iri` to its Collection-IRI or Col-IRI 
+    
+        or
+    
+    setting 'workspace' and 'collection' to the labels for the desired workspace and collection.
+
+SWORD2 request parameters:
+
+    `suggested_identifier`              -- the suggested identifier of this resource (HTTP header of 'Slug'), 
+
+    `in_progress` (`True` or `False`)   -- whether or not the deposit should be considered by the 
+                                           server to be in progress ('In-Progress') 
+    `on_behalf_of`                      -- if this is a mediated deposit ('On-Behalf-Of') 
+                                           (the client-wide setting `self.on_behalf_of will be used otherwise)    
+
+        
+1. "Binary File Deposit in a given Collection"
+----------------------------------------------
+            
+Set the following parameters in addition to the basic parameters:
+
+    `payload`   - the payload to send. Can be either a bytestring or a File-like object that supports `payload.read()`
+    `mimetype`  - MIMEType of the payload
+    `filename`  - filename. Most SWORD2 uploads have this as being mandatory.
+    `packaging` - the SWORD2 packaging type of the payload. 
+                    eg packaging = 'http://purl.org/net/sword/package/Binary'
+        
+Response:
+    a tuple: (location, deposit_receipt)
+        location        -- Contents of the HTTP "Content-Location" in the response, if present
+        deposit_receipt -- `sword2.Deposit_Receipt` instance or None, if no receipt was given
+
+
+2. "Creating a Resource with an Atom Entry"
+-------------------------------------------
+
+create a container within a SWORD server and optionally provide it with metadata without adding any binary content to it. 
+
+Set the following parameters in addition to the basic parameters:
+    
+    `metadata_entry`  - An instance of `sword2.Entry`, set with the metadata required.
+    
+for example:
+    # conn = `sword2.Connection`, collection_iri = Collection-IRI
+    >>> from sword2 import Entry
+    >>> entry = Entry(title = "My new deposit",
+    ...               id = "foo:id",
+    ...               dcterms_abstract = "My Thesis",
+    ...               dcterms_author = "Me",
+    ...               dcterms_issued = "2009")
+    
+    >>> conn.create_resource(col_iri = collection_iri,
+    ...                      metadata_entry = entry,
+    ...                      in_progress = True)          
+    # likely to want to add the thesis files later for example but get the identifier for the deposit now
+
+Response:
+    a tuple: (location, deposit_receipt)
+        location        -- Contents of the HTTP "Content-Location" in the response, if present
+        deposit_receipt -- `sword2.Deposit_Receipt` instance or None, if no receipt was given
+
+3. "Creating a Resource with a Multipart Deposit"
+-------------------------------------------------
+
+Create a resource in a given collection by uploading a file AND the metadata about this resource.
+
+To make this sort of request, just set the parameters as shown for both the binary upload and the metadata upload.
+
+eg:
+    
+    >>> conn.create_resource(col_iri = collection_iri,
+    ...                      metadata_entry = entry,
+    ...                      payload = open("foo.zip", "r"),
+    ...                      mimetype =  
+                .... and so on
+
+Response:
+    a tuple: (location, deposit_receipt)
+        location        -- Contents of the HTTP "Content-Location" in the response, if present
+        deposit_receipt -- `sword2.Deposit_Receipt` instance or None, if no receipt was given
+
+(under the hood, this request uses Atom Multipart-related)
+
+From the spec:
+
+"In order to ensure that all SWORD clients and servers can exchange a full range of file content and metadata, the use of Atom Multipart [AtomMultipart] is permitted to combine a package (possibly a simple ZIP) with a set of Dublin Core metadata terms [DublinCore] embedded in an Atom Entry.
+
+The SWORD server is not required to support packaging formats, but this profile RECOMMENDS that the server be able to accept a ZIP file as the Media Part of an Atom Multipart request (See Section 5: IRIs and Section 7: Packaging for more details)."
+        """
         conn_l.debug("Create Resource")
         if not col_iri:
             for w, collections in self.workspaces:
@@ -475,7 +755,7 @@ class Connection(object):
                                   request_type='Col_IRI POST')
         
     def update_resource(self, 
-                        edit_media_iri,  
+                        edit_media_iri = None,  
                         
                         payload,       # These need to be set to upload a file      
                         filename,      # According to spec, "The client MUST supply a Content-Disposition header with a filename parameter 
@@ -485,8 +765,65 @@ class Connection(object):
                         on_behalf_of=None,
                         in_progress=False, 
                         metadata_relevant=False
+                        # Pass back the deposit receipt to automatically get the right IRI to use
+                        dr = None
                         ):
-        conn_l.info("Update Resource via Edit-Media-IRI %s" % edit_media_iri)
+        """
+Replacing the File Content of a Resource
+
+#BETASWORD2URL
+See http://sword-app.svn.sourceforge.net/viewvc/sword-app/spec/trunk/SWORDProfile.html?revision=HEAD#protocoloperations_editingcontent_binary
+
+The `Connection` can replace the file content of a resource, given the Edit-Media-IRI for this resource. This can be found
+from the `sword2.Deposit_Receipt.edit_media` attribute of a previous deposit, or directly from the deposit receipt XML response.
+
+Usage:
+------
+
+Set the target for this request:
+--------------------------------
+
+Set the `edit_media_iri` parameter to the Edit-Media-IRI.
+
+    OR 
+
+you can pass back the `sword2.Deposit_Receipt` object you got from a previous transaction as the `dr` parameter, 
+and the correct IRI will automatically be chosen.
+
+Then, add in the payload:
+-------------------------
+
+Set the following parameters in addition to the basic parameters (see `self.create_resource`):
+
+    `payload`   - the payload to send. Can be either a bytestring or a File-like object that supports `payload.read()`
+    `mimetype`  - MIMEType of the payload
+    `filename`  - filename. Most SWORD2 uploads have this as being mandatory.
+    `packaging` - the SWORD2 packaging type of the payload. 
+                    eg packaging = 'http://purl.org/net/sword/package/Binary'
+                    
+    `metadata_relevant` - This should be set to `True` if the server should consider the file a potential source of metadata extraction, 
+                          or `False` if the server should not attempt to extract any metadata from the deposi
+
+Response:
+    a tuple: (location, deposit_receipt)
+        location        -- Contents of the HTTP "Content-Location" in the response, if present
+        deposit_receipt -- `sword2.Deposit_Receipt` instance or None, if no receipt was given
+        
+        The response may also be (True, True) if the request was successful, but no response was given (HTTP code 204 No Content)
+        """
+        if not edit_media_iri:
+            if dr != None:
+                conn_l.info("Using the deposit receipt to get the Edit-Media-IRI")
+                edit_media_iri = dr.edit_media
+                if edit_media_iri:
+                    conn_l.info("Update Resource via Edit-Media-IRI %s" % edit_media_iri)
+                else:
+                    raise Exception("No Edit-Media-IRI was given and no suitable IRI was found in the deposit receipt.")   
+            else:
+                raise Exception("No Edit-Media-IRI was given")
+        else:
+            conn_l.info("Update Resource via Edit-Media-IRI %s" % edit_media_iri)
+            
         return self._make_request(target_iri = edit_media_iri,
                                   payload=payload,
                                   mimetype=mimetype,
@@ -495,15 +832,79 @@ class Connection(object):
                                   packaging=packaging,
                                   on_behalf_of=on_behalf_of,
                                   method="PUT",
-                                  metadata_relevant=metadata_relevant,
+                                  metadata_relevant=str(metadata_relevant),
                                   request_type='EM_IRI PUT')
 
-    def update_metadata_for_resource(self, edit_iri,
+    def update_metadata_for_resource(self, edit_iri = None,
                                            metadata_entry,    # required
                                            in_progress=False,
-                                           on_behalf_of=None
+                                           on_behalf_of=None,
+                                           dr = None
                                            ):
-        conn_l.info("Update Resource via Edit-IRI %s" % edit_iri)
+        """
+Replacing the Metadata of a Resource
+
+#BETASWORD2URL
+See http://sword-app.svn.sourceforge.net/viewvc/sword-app/spec/trunk/SWORDProfile.html?revision=HEAD#protocoloperations_editingcontent_metadata
+
+Replace the metadata of a resource as identified by its Edit-IRI. 
+
+Note, from the specification: "The client can only be sure that the server will support this process when using the default format supported by SWORD: Qualified Dublin Core XML embedded directly in the atom:entry. Other metadata formats MAY be supported by a particular server, but this is not covered by the SWORD profile"
+
+Usage:
+------
+
+Set the target for this request:
+--------------------------------
+
+Set the `edit_iri` parameter to the Edit-IRI.
+
+    OR 
+
+you can pass back the `sword2.Deposit_Receipt` object you got from a previous transaction as the `dr` parameter, 
+and the correct IRI will automatically be chosen.
+
+Then, add in the metadata:
+--------------------------
+
+Set the following in addition to the basic parameters:
+    
+    `metadata_entry`  - An instance of `sword2.Entry`, set with the metadata required.
+    
+for example, to replace the metadata for a given:
+    # conn = `sword2.Connection`, edit_iri = Edit-IRI
+    
+    >>> from sword2 import Entry
+    >>> entry = Entry(title = "My new deposit",
+    ...               id = "new:id",    # atom:id
+    ...               dcterms_abstract = "My Thesis",
+    ...               dcterms_author = "Ben",
+    ...               dcterms_issued = "2010")
+    
+    >>> conn.update_metadata_for_resource(edit_iri = edit_iri,
+    ...                                   metadata_entry = entry)
+              
+
+Response:
+    a tuple: (location, deposit_receipt)
+        location        -- Contents of the HTTP "Content-Location" in the response, if present
+        deposit_receipt -- `sword2.Deposit_Receipt` instance or None, if no receipt was given
+        
+        The response may also be (True, True) if the request was successful, but no response was given (HTTP code 204 No Content)
+        """
+        if not edit_iri:
+            if dr != None:
+                conn_l.info("Using the deposit receipt to get the Edit-IRI")
+                edit_iri = dr.edit
+                if edit_iri:
+                    conn_l.info("Update Resource via Edit-IRI %s" % edit_iri)
+                else:
+                    raise Exception("No Edit-IRI was given and no suitable IRI was found in the deposit receipt.")   
+            else:
+                raise Exception("No Edit-IRI was given")
+        else:
+            conn_l.info("Update Resource via Edit-IRI %s" % edit_iri)
+
         return self._make_request(target_iri = edit_iri,
                                   metadata_entry=metadata_entry,
                                   on_behalf_of=on_behalf_of,
@@ -522,6 +923,35 @@ class Connection(object):
                         in_progress=False, 
                         metadata_relevant=False
                         ):
+        """
+Adding Files to the Media Resource
+
+From the spec, paraphrased:
+    
+    "This feature is for use when clients wish to send individual files to the server and to receive back the IRI for the created resource. [Adding new items to the deposit container] will not give back the location of the deposited resources, so in cases where the server does not provide the (optional) Deposit Receipt, it is not possible for the client to ascertain the location of the file actually deposited - the Location header in that operation is the Edit-IRI. By POSTing to the EM-IRI, the Location header will return the IRI of the deposited file itself, rather than that of the container.
+
+As the EM-IRI represents the Media Resource itself, rather than the Container, this operation will not formally support metadata handling, and therefore also offers no explicit support for packaging either since packages may be both content and metadata. Nonetheless, for files which may contain extractable metadata, there is a Metadata-Relevant header which can be defined to indicate whether the deposit can be used to augment the metadata of the container."
+
+#BETASWORD2URL
+See http://sword-app.svn.sourceforge.net/viewvc/sword-app/spec/trunk/SWORDProfile.html?revision=HEAD#protocoloperations_addingcontent_mediaresource
+
+
+Set the following parameters in addition to the basic parameters:
+
+    `edit_media_iri` - The Edit-Media-IRI
+    
+    `payload`   - the payload to send. Can be either a bytestring or a File-like object that supports `payload.read()`
+    `mimetype`  - MIMEType of the payload
+    `filename`  - filename. Most SWORD2 uploads have this as being mandatory.
+    `packaging` - the SWORD2 packaging type of the payload. 
+                    eg packaging = 'http://purl.org/net/sword/package/Binary'
+        
+Response:
+    a tuple: (location, deposit_receipt)
+        location        -- Contents of the HTTP "Content-Location" in the response, if present
+        deposit_receipt -- `sword2.Deposit_Receipt` instance or None, if no receipt was given
+
+        """
         conn_l.info("Appending file to a deposit via Edit-Media-IRI %s" % edit_media_iri)
         return self._make_request(target_iri = edit_media_iri,
                                   payload=payload,
@@ -537,14 +967,112 @@ class Connection(object):
                         
                         payload=None,       # These need to be set to upload a file      
                         filename=None,      # According to spec, "The client MUST supply a Content-Disposition header with a filename parameter 
-                                       #                     (note that this requires the filename be expressed in ASCII)."
+                                            #                     (note that this requires the filename be expressed in ASCII)."
                         mimetype=None,
                         packaging=None,
                         on_behalf_of=None,
                         metadata_entry=None,
                         metadata_relevant=False,
-                        in_progress=False
+                        in_progress=False,
+                        dr = None
                         ):
+        """
+Adding Content to a Resource
+
+#BETASWORD2URL
+See http://sword-app.svn.sourceforge.net/viewvc/sword-app/spec/trunk/SWORDProfile.html?revision=HEAD#protocoloperations_addingcontent
+
+Usage:
+------
+
+Set the target for this request:
+--------------------------------
+
+Set `se_iri` to be the SWORD2-Edit-IRI for a given deposit. (This can be found in `sword2.Deposit_Receipt.se_iri`)
+
+
+    OR 
+
+you can pass back the `sword2.Deposit_Receipt` object you got from a previous transaction as the `dr` parameter, 
+and the correct IRI will automatically be chosen.
+
+Then:
+-----
+
+1. "Adding New Packages or Files to a Container"
+------------------------------------------------
+            
+Set the following parameters in addition to the basic parameters:
+
+    `payload`   - the payload to send. Can be either a bytestring or a File-like object that supports `payload.read()`
+    `mimetype`  - MIMEType of the payload
+    `filename`  - filename. Most SWORD2 uploads have this as being mandatory.
+    `packaging` - the SWORD2 packaging type of the payload. 
+                    eg packaging = 'http://purl.org/net/sword/package/Binary'
+        
+Response:
+    a tuple: (location, deposit_receipt)
+        location        -- Contents of the HTTP "Content-Location" in the response, if present
+        deposit_receipt -- `sword2.Deposit_Receipt` instance or None, if no receipt was given
+
+
+2. "Adding New Metadata to a Container"
+---------------------------------------
+
+NB SWORD2 does not instruct the server on the best way to handle metadata, only that metadata SHOULD be 
+added and not overwritten; in certain circumstances this may not produce the desired behaviour. 
+
+Set the following parameters in addition to the basic parameters:
+    
+    `metadata_entry`  - An instance of `sword2.Entry`, set with the metadata required.
+    
+for example:
+    # conn = `sword2.Connection`, se_iri = SWORD2-Edit-IRI
+    >>> from sword2 import Entry
+    >>> entry = Entry(dcterms:identifier = "doi://......")
+    >>> conn.add_new_item_to_container(se_iri = se_iri,
+    ...                                metadata_entry = entry)
+              
+Response:
+    a tuple: (location, deposit_receipt)
+        location        -- Contents of the HTTP "Content-Location" in the response, if present
+        deposit_receipt -- `sword2.Deposit_Receipt` instance or None, if no receipt was given
+
+3. "Adding New Metadata and Packages or Files to a Container with Multipart"
+----------------------------------------------------------------------------
+
+Create a resource in a given collection by uploading a file AND the metadata about this resource.
+
+To make this sort of request, just set the parameters as shown for both the binary upload and the metadata upload.
+
+eg:
+    
+    >>> conn.add_new_item_to_container(se_iri = se_iri,
+    ...                      metadata_entry = entry,
+    ...                      payload = open("foo.zip", "r"),
+    ...                      mimetype =  
+                .... and so on
+
+Response:
+    a tuple: (location, deposit_receipt)
+        location        -- Contents of the HTTP "Content-Location" in the response, if present
+        deposit_receipt -- `sword2.Deposit_Receipt` instance or None, if no receipt was given
+
+        """
+        
+        if not se_iri:
+            if dr != None:
+                conn_l.info("Using the deposit receipt to get the SWORD2-Edit-IRI")
+                se_iri = dr.se_iri
+                if se_iri:
+                    conn_l.info("Update Resource via SWORD2-Edit-IRI %s" % se_iri)
+                else:
+                    raise Exception("No SWORD2-Edit-IRI was given and no suitable IRI was found in the deposit receipt.")   
+            else:
+                raise Exception("No SWORD2-Edit-IRI was given")
+        else:
+            conn_l.info("Update Resource via SWORD2-Edit-IRI %s" % se_iri)
+
         conn_l.info("Adding new file, metadata or both to a SWORD deposit via SWORD-Edit-IRI %s" % se_iri)
         return self._make_request(target_iri = se_iri,
                                   payload=payload,
@@ -562,24 +1090,163 @@ class Connection(object):
     def delete_resource(self,
                         resource_iri,
                         on_behalf_of=None):
+        """
+Delete resource
+
+Generic method to send an HTTP DELETE request to a given IRI.
+
+Can be given the optional parameter of `on_behalf_of`.
+        """
         conn_l.info("Deleting resource %s" % resource_iri)
         return self._make_request(target_iri = resource_iri,
                                   on_behalf_of=on_behalf_of,
                                   method="DELETE",
                                   request_type='IRI DELETE')
 
+    def delete_content_of_resource(self, edit_media_iri = None,
+                                         on_behalf_of = None,
+                                         dr = None):
+    
+    """
+Deleting the Content of a Resource    
+    
+Remove all the content of a resource without removing the resource itself
+
+#BETASWORD2URL
+See http://sword-app.svn.sourceforge.net/viewvc/sword-app/spec/trunk/SWORDProfile.html?revision=HEAD#protocoloperations_deletingcontent
+
+Usage:
+------
+
+Set the target for this request:
+--------------------------------
+
+Set `edit_media_iri` to be the Edit-Media-IRI for a given resource.
+
+
+    OR 
+
+you can pass back the `sword2.Deposit_Receipt` object you got from a previous transaction as the `dr` parameter, 
+and the correct IRI will automatically be chosen.
+
+    """
+        if not edit_media_iri:
+            if dr != None:
+                conn_l.info("Using the deposit receipt to get the Edit-Media-IRI")
+                edit_media_iri = dr.edit_media
+                if edit_media_iri:
+                    conn_l.info("Deleting Resource via Edit-Media-IRI %s" % edit_media_iri)
+                else:
+                    raise Exception("No Edit-Media-IRI was given and no suitable IRI was found in the deposit receipt.")   
+            else:
+                raise Exception("No Edit-Media-IRI was given")
+        else:
+            conn_l.info("Deleting Resource via Edit-Media-IRI %s" % edit_media_iri)
+
+        return self.delete_resource(edit_media_iri,
+                                    on_behalf_of = on_behalf_of)
+
+
+
+
+
+    def delete_container(self, edit_iri = None,
+                                         on_behalf_of = None,
+                                         dr = None):
+    
+    """
+Deleting the Container    
+    
+Delete the entire object on the server, effectively removing the deposit entirely.
+
+#BETASWORD2URL
+See http://sword-app.svn.sourceforge.net/viewvc/sword-app/spec/trunk/SWORDProfile.html?revision=HEAD#protocoloperations_deleteconteiner
+
+Usage:
+------
+
+Set the target for this request:
+--------------------------------
+
+Set `edit_iri` to be the Edit-IRI for a given resource.
+
+
+    OR 
+
+you can pass back the `sword2.Deposit_Receipt` object you got from a previous transaction as the `dr` parameter, 
+and the correct IRI will automatically be chosen.
+
+    """
+        if not edit_iri:
+            if dr != None:
+                conn_l.info("Using the deposit receipt to get the Edit-IRI")
+                edit_iri = dr.edit
+                if edit_iri:
+                    conn_l.info("Deleting Container via Edit-IRI %s" % edit_iri)
+                else:
+                    raise Exception("No Edit-IRI was given and no suitable IRI was found in the deposit receipt.")   
+            else:
+                raise Exception("No Edit-IRI was given")
+        else:
+            conn_l.info("Deleting Container via Edit-IRI %s" % edit_media_iri)
+
+        return self.delete_resource(edit_iri,
+                                    on_behalf_of = on_behalf_of)
+            
     def complete_deposit(self,
-                        se_iri,
-                        on_behalf_of=None):
-        conn_l.info("Completeing the deposit of %s (Edit-Media-IRI)" % se_iri)
+                        se_iri = None,
+                        on_behalf_of=None,
+                        dr = None):
+        """
+Completing a Previously Incomplete Deposit
+
+Use this method to indicate to a server that a deposit which was 'in progress' is now complete. In other words, complete a deposit
+which had the 'In-Progress' flag set to True.
+
+#BETASWORD2URL
+http://sword-app.svn.sourceforge.net/viewvc/sword-app/spec/trunk/SWORDProfile.html?revision=HEAD#continueddeposit_complete
+
+Usage:
+------
+
+Set the target for this request:
+--------------------------------
+
+Set `se_iri` to be the SWORD2-Edit-IRI for a given resource.
+
+
+    OR 
+
+you can pass back the `sword2.Deposit_Receipt` object you got from a previous transaction as the `dr` parameter, 
+and the correct IRI will automatically be chosen.
+        """
+        
+        if not se_iri:
+            if dr != None:
+                conn_l.info("Using the deposit receipt to get the SWORD2-Edit-IRI")
+                se_iri = dr.se_iri
+                if se_iri:
+                    conn_l.info("Complete deposit using the SWORD2-Edit-IRI %s" % se_iri)
+                else:
+                    raise Exception("No SWORD2-Edit-IRI was given and no suitable IRI was found in the deposit receipt.")   
+            else:
+                raise Exception("No SWORD2-Edit-IRI was given")
+        else:
+            conn_l.info("Complete deposit using the SWORD2-Edit-IRI %s" % se_iri)
+        
         return self._make_request(target_iri = se_iri,
                                   on_behalf_of=on_behalf_of,
-                                  in_progress=False,
+                                  in_progress='false',
                                   method="POST",
                                   empty=True,
                                   request_type='SE_IRI Complete Deposit')
 
     def get_atom_sword_statement(self, sword_statement_iri):
+        """
+Getting the Sword Statement.
+
+IN PROGRESS - USE AT OWN RISK.... see `sword2.Sword_Statement`.
+        """
         # get the statement first
         conn_l.debug("Trying to GET the ATOM Sword Statement at %s." % sword_statement_iri)
         response = self.get_resource(sword_statement_iri, headers = {'Accept':'application/atom+xml;type=feed'})
@@ -594,7 +1261,58 @@ class Connection(object):
             #    # Any error here is to do with the parsing
             #    return response.content
 
-    def get_resource(self, content_iri, packaging=None, on_behalf_of=None, headers = {}):
+    def get_resource(self, content_iri = None, 
+                           packaging=None, 
+                           on_behalf_of=None, 
+                           headers = {},
+                           dr = None):
+        """
+Retrieving the content
+
+Get the file or package from the SWORD2 server.
+
+From the specification:
+    "The Deposit Receipt contains two IRIs which can be used to retrieve content from the server: Cont-IRI and EM-IRI. These are provided in the atom:content@src element and the atom:link@rel="edit-media" elements respectively. Their only functional difference is that the client MUST NOT carry out any HTTP operations other than GET on the Cont-IRI, while all operations are permitted on the EM-IRI. It is acceptable, but not required, that both IRIs to be the same, and in this section we refer only to the EM-IRI but in all cases it can be substituted for the Cont-IRI."
+
+#BETASWORD2URL
+See http://sword-app.svn.sourceforge.net/viewvc/sword-app/spec/trunk/SWORDProfile.html?revision=HEAD#protocoloperations_retrievingcontent
+
+Usage:
+------
+
+Set the target for this request:
+--------------------------------
+
+Set `content_iri` to be the Content-IRI for a given resource (or to the IRI of any resource you wish to HTTP GET)
+
+
+    OR 
+
+you can pass back the `sword2.Deposit_Receipt` object you got from a previous transaction as the `dr` parameter, 
+and the correct IRI will automatically be chosen.
+
+Response:
+    
+    A `ContentWrapper` - 
+        `ContentWrapper.resp`    -- response headers
+        `ContentWrapper.content` -- body of response from server (the file or package)
+        `ContentWrapper.code`    -- status code ('200' on success.)
+
+        """
+                
+        if not content_iri:
+            if dr != None:
+                conn_l.info("Using the deposit receipt to get the SWORD2-Edit-IRI")
+                content_iri = dr.cont_iri
+                if content_iri:
+                    conn_l.info("Getting the resource at Content-IRI %s" % content_iri)
+                else:
+                    raise Exception("No Content-IRI was given and no suitable IRI was found in the deposit receipt.")   
+            else:
+                raise Exception("No Content-IRI was given")
+        else:
+            conn_l.info("Getting the resource at Content-IRI %s" % content_iri)
+        
         # 406 - PackagingFormatNotAvailable
         if self.honour_receipts and packaging:
             # Make sure that the packaging format is available from the deposit receipt, if loaded

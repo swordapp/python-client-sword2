@@ -19,6 +19,9 @@ class Forbidden(HTTPResponseError):
 class RequestTimeOut(HTTPResponseError):
     pass
 
+class NotFound(HTTPResponseError):
+    pass
+
 class PackagingFormatNotAvailable(HTTPResponseError):
     pass
     
