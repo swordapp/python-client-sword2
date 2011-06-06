@@ -71,21 +71,23 @@ class SDCollection(object):
         
         Read useful information from the attributes of this object once loaded.
         
-        Collection.title                --  <atom:title> - Title of collection, (`str`)
-                   href                 --  <collection href=... > - Collection IRI (`str`)
-                   accept               --  <accept>*</accept> - the formats which this collection can take in (`list` of `str`)
-                   accept_multipart     --  <accept alternate="multipart-related">*</accept> - the formats which this collection can take
+        Attributes::
+        
+        title                --  <atom:title> - Title of collection, (`str`)
+        href                 --  <collection href=... > - Collection IRI (`str`)
+        accept               --  <accept>*</accept> - the formats which this collection can take in (`list` of `str`)
+        accept_multipart     --  <accept alternate="multipart-related">*</accept> - the formats which this collection can take
                                                                                                in via multipart-related (`list` of `str`)
-                   categories           --  <atom:catogory> - Collection category (`list` of `sword2.Category`'s)
-
-                   collectionPolicy     --  <sword:collectionPolicy> - Collection policy (`str`)
-                   description          --  <dcterms:description> - Collection descriptive text (`str`)
-                   mediation            --  <sword:mediation> - Support for mediated deposit (`True` or `False`)
-                   treatment            --  <sword:treatment> - from the SWORD2 specifications:
-                                            ".. either a human-readable statement describing treatment the deposited resource has received or a IRI that dereferences to such a description."
-                   acceptPackaging      --  <sword:acceptPackaging> - Accepted package types (`list` of `str`)
+        categories           --  <atom:catogory> - Collection category (`list` of `sword2.Category`'s)
+        collectionPolicy     --  <sword:collectionPolicy> - Collection policy (`str`)
+        description          --  <dcterms:description> - Collection descriptive text (`str`)
+        mediation            --  <sword:mediation> - Support for mediated deposit (`True` or `False`)
+        treatment            --  <sword:treatment> - from the SWORD2 specifications:
+                                            ".. either a human-readable statement describing treatment the deposited resource 
+                                            has received or a IRI that dereferences to such a description."
+        acceptPackaging      --  <sword:acceptPackaging> - Accepted package types (`list` of `str`)
                                             from the SWORD2 specifications: "The value SHOULD be a IRI for a known packaging format"
-                   service              --  <sword:service> - References to nested service descriptions (`list` of `str`)
+        service              --  <sword:service> - References to nested service descriptions (`list` of `str`)
         
         Example XML fragment that is expected:  (xmlns="http://www.w3.org/2007/app")
             
@@ -109,22 +111,22 @@ class SDCollection(object):
         
         Again, this step is done by the `sword2.Service_Document`, but if the above XML was in the `doc` variable:
         
-        # Get an etree-compatible library, such as from `lxml.etree`, `xml.etree` or `elementtree.ElementTree`
-        >>> from sword2.compatible_libs import etree
-        >>> from sword2 import SDCollection
-        >>> dom = etree.fromstring(doc)
+            # Get an etree-compatible library, such as from `lxml.etree`, `xml.etree` or `elementtree.ElementTree`
+            >>> from sword2.compatible_libs import etree
+            >>> from sword2 import SDCollection
+            >>> dom = etree.fromstring(doc)
         
-        # create an `SDCollection` instance from this XML document
-        >>> c = SDCollection(dom = dom)
+            # create an `SDCollection` instance from this XML document
+            >>> c = SDCollection(dom = dom)
         
-        # query it
-        >>> c.treatment
-        "Treatment description"
-        # Non-unique elements, for example:
-        >>> c.service
-        ["http://swordapp.org/sd-iri/e4"]
-        >>> c.accept
-        ["*/*"]
+            # query it
+            >>> c.treatment
+            "Treatment description"
+            # Non-unique elements, for example:
+            >>> c.service
+            ["http://swordapp.org/sd-iri/e4"]
+            >>> c.accept
+            ["*/*"]
         
         """
         # APP/Atom

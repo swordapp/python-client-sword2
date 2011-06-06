@@ -88,66 +88,66 @@ class Entry(object):
     
     Example of use:
 
->>> from sword2 import Entry
->>> e = Entry()   # it can be opened blank, but more usefully...
->>> e = Entry(id="atom id",
-              title="atom title",
-              dcterms_identifier="some other id")
+    >>> from sword2 import Entry
+    >>> e = Entry()   # it can be opened blank, but more usefully...
+    >>> e = Entry(id="atom id",
+                  title="atom title",
+                  dcterms_identifier="some other id")
 
-# Getting the bytestring document
->>> print str(e)
-<?xml version="1.0"?><entry xmlns="http://www.w3.org/2005/Atom" xmlns:dcterms="http://purl.org/dc/terms/">
-    <generator uri="http://bitbucket.org/beno/python-sword2" version="0.1"/>
-<updated>2011-06-05T16:20:34.914474</updated><dcterms:identifier>some other id</dcterms:identifier><id>atom id</id><title>atom title</title></entry>
+    # Getting the bytestring document
+    >>> print str(e)
+    <?xml version="1.0"?><entry xmlns="http://www.w3.org/2005/Atom" xmlns:dcterms="http://purl.org/dc/terms/">
+        <generator uri="http://bitbucket.org/beno/python-sword2" version="0.1"/>
+    <updated>2011-06-05T16:20:34.914474</updated><dcterms:identifier>some other id</dcterms:identifier><id>atom id</id><title>atom title</title></entry>
 
 
-# Adding fields to the metadata entry
-# dcterms (and other, non-atom fields) can be used by passing in a parameter with an underscore between the 
-# prefix and element name, eg:
->>> e.add_fields(dcterms_title= "dcterms title", dcterms_some_other_field = "other")
+    # Adding fields to the metadata entry
+    # dcterms (and other, non-atom fields) can be used by passing in a parameter with an underscore between the 
+    # prefix and element name, eg:
+    >>> e.add_fields(dcterms_title= "dcterms title", dcterms_some_other_field = "other")
 
-# atom:author field is treated slightly differently than all the other fields:
-# dictionary is required
->>> e.add_fields(author={"name":"Ben", "email":"foo@example.org"})
->>> print str(e)
-<?xml version="1.0"?>
-<entry xmlns="http://www.w3.org/2005/Atom" xmlns:dcterms="http://purl.org/dc/terms/">
-    <generator uri="http://bitbucket.org/beno/python-sword2" version="0.1"/>
-    <updated>2011-06-05T16:20:34.914474</updated>
-    <dcterms:identifier>some other id</dcterms:identifier>
-    <id>atom id</id><title>atom title</title>
-    <author>
-        <name>Ben</name>
-        <email>foo@example.org</email>
-    </author>
-    <dcterms:some_other_field>other</dcterms:some_other_field>
-    <dcterms:title>dcterms title</dcterms:title>
-</entry>
->>> 
+    # atom:author field is treated slightly differently than all the other fields:
+    # dictionary is required
+    >>> e.add_fields(author={"name":"Ben", "email":"foo@example.org"})
+    >>> print str(e)
+    <?xml version="1.0"?>
+    <entry xmlns="http://www.w3.org/2005/Atom" xmlns:dcterms="http://purl.org/dc/terms/">
+        <generator uri="http://bitbucket.org/beno/python-sword2" version="0.1"/>
+        <updated>2011-06-05T16:20:34.914474</updated>
+        <dcterms:identifier>some other id</dcterms:identifier>
+        <id>atom id</id><title>atom title</title>
+        <author>
+            <name>Ben</name>
+            <email>foo@example.org</email>
+        </author>
+        <dcterms:some_other_field>other</dcterms:some_other_field>
+        <dcterms:title>dcterms title</dcterms:title>
+    </entry>
+    >>> 
 
-# Other namespaces - use `Entry.register_namespace` to add them to the list of those considered  (prefix, URL):
->>> e.register_namespace("myschema", "http://example.org")
->>> e.add_fields(myschema_foo = "bar")
->>> print str(e)
-<?xml version="1.0"?><entry xmlns="http://www.w3.org/2005/Atom" xmlns:dcterms="http://purl.org/dc/terms/">
-    <generator uri="http://bitbucket.org/beno/python-sword2" version="0.1"/>
-    <updated>2011-06-05T16:20:34.914474</updated>
-    <dcterms:identifier>some other id</dcterms:identifier>
-    <id>atom id</id><title>atom title</title>
-    <author>
-        <name>Ben</name>
-        <email>foo@example.org</email>
-    </author>
-    <dcterms:some_other_field>other</dcterms:some_other_field>
-    <dcterms:title>dcterms title</dcterms:title>
-    <myschema:foo xmlns:myschema="http://example.org">bar</myschema:foo>
-</entry>
+    # Other namespaces - use `Entry.register_namespace` to add them to the list of those considered  (prefix, URL):
+    >>> e.register_namespace("myschema", "http://example.org")
+    >>> e.add_fields(myschema_foo = "bar")
+    >>> print str(e)
+    <?xml version="1.0"?><entry xmlns="http://www.w3.org/2005/Atom" xmlns:dcterms="http://purl.org/dc/terms/">
+        <generator uri="http://bitbucket.org/beno/python-sword2" version="0.1"/>
+        <updated>2011-06-05T16:20:34.914474</updated>
+        <dcterms:identifier>some other id</dcterms:identifier>
+        <id>atom id</id><title>atom title</title>
+        <author>
+            <name>Ben</name>
+            <email>foo@example.org</email>
+        </author>
+        <dcterms:some_other_field>other</dcterms:some_other_field>
+        <dcterms:title>dcterms title</dcterms:title>
+        <myschema:foo xmlns:myschema="http://example.org">bar</myschema:foo>
+    </entry>
 
-This class doesn't provide editing/updating functions as the full etree API is exposed through the
-attribute 'entry'. For example:
+    This class doesn't provide editing/updating functions as the full etree API is exposed through the
+    attribute 'entry'. For example:
 
->>> len(e.entry.getchildren())
-14
+    >>> len(e.entry.getchildren())
+    14
 """
     atom_fields = ['title','id','updated','summary']
     add_ns = ['dcterms', 'atom', 'app']

@@ -57,7 +57,7 @@ class TestEntry(TestController):
     def test_00_blank_init(self):
         error_d = Error_Document(code=402, resp={'content-type':'text/plain'})
         assert error_d.code == 402
-        assert error_d.resp['content-type'] == 'text/plain'
+        assert error_d.response_headers['content-type'] == 'text/plain'
         
     def test_01_init_with_xml(self):
         error_d = Error_Document(ED)

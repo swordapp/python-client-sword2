@@ -8,3 +8,7 @@ from server_errors import SWORD2ERRORSBYIRI, SWORD2ERRORSBYNAME
 from utils import Timer, NS, get_md5, create_multipart_related
 from implementation_info import *
 from atom_objects import Entry, Category
+
+"""
+SWORD2 Python Client blurb
+"""

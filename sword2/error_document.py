@@ -4,7 +4,8 @@
 from deposit_receipt import Deposit_Receipt
 from server_errors import SWORD2ERRORSBYIRI, get_error
 
-"""
+class Error_Document(Deposit_Receipt):
+    """
 Example Error document:
 
 <?xml version="1.0" encoding="utf-8"?>
@@ -40,9 +41,8 @@ The error document SHOULD contain an atom:summary element with a short descripti
 
 The error document MAY contain a sword:verboseDescription element with a long description of the problem or any other appropriate software-level debugging output (e.g. a stack trace). Server implementations may wish to provide this for client developers' convenience, but may wish to disable such output in any production systems.
 
-The server SHOULD specify that the Content-Type of the is text/xml or application/xml."""
-
-class Error_Document(Deposit_Receipt):
+The server SHOULD specify that the Content-Type of the is text/xml or application/xml.
+    """
     def __init__(self, xml_deposit_receipt=None, code=None, resp=None):
         if xml_deposit_receipt:
             super(Error_Document, self).__init__(xml_deposit_receipt)
@@ -52,8 +52,9 @@ class Error_Document(Deposit_Receipt):
         self.error_href = None
         self.error_info = None
         self.verboseDescription = None
+        self.content = None  # for parity with the ContentWrapper
         self.code = code
-        self.resp = resp
+        self.response_headers = resp
         self._characterise_error()
     
     def _characterise_error(self):

@@ -440,6 +440,19 @@ Loading in a locally held Service Document:
         # HTTP settings:
         method          -- "GET", "POST", etc
         request_type    -- A label to be used in the transaction history for this particular operation. 
+        
+        Response:
+        
+        A `sword2.Deposit_Receipt` object containing the deposit receipt data. If the response was blank or 
+        not a Deposit Response, then only a few attributes will be populated:
+            
+        `code` -- HTTP code of the response
+        `response_headers`  -- `dict` of the reponse headers
+        `content`  --  (Optional) in case the response body is not empty but the response is not a Deposit Receipt
+        
+        If exception-throwing is turned off (`error_response_raises_exceptions = False` or `self.raise_except = False`)
+        then the response will be a `sword2.Error_Document`, but will still have the aforementioned attributes set, (code,
+        response_headers, etc)
         """
         if payload:
             md5sum, f_size = get_md5(payload)
@@ -565,7 +578,7 @@ Loading in a locally held Service Document:
                                  process_duration = took_time)
         else:
             conn_l.error("Parameters were not complete: requires a metadata_entry, or a payload/filename/packaging or both")
-            return (None, None)
+            raise Exception("Parameters were not complete: requires a metadata_entry, or a payload/filename/packaging or both")
         
         if resp['status'] == "201":
             #   Deposit receipt in content
@@ -574,31 +587,50 @@ Loading in a locally held Service Document:
             location = resp.get('location', None)
             if len(content) > 0:
                 # Fighting chance that this is a deposit receipt
-                d = Deposit_Receipt(content)
+                d = Deposit_Receipt(xml_deposit_receipt = content)
                 if d.parsed:
                     conn_l.info("Server response included a Deposit Receipt. Caching a copy in .resources['%s']" % d.edit)
-                    self._cache_deposit_receipt(d)
-                    if not location:
-                        return (d.edit, d)
-                return (location, d)
+                d.response_headers = dict(resp)
+                d.location = location
+                d.code = 201
+                self._cache_deposit_receipt(d)
+                return d
             else:
-                return (location, None)
+                # No body...
+                d = Deposit_Receipt()
+                conn_l.info("Server response dir not include a Deposit Receipt.")
+                d.response_headers = dict(resp)
+                d.code = 201
+                d.location = location
+                return d
         elif resp['status'] == "204":
             #   Deposit receipt in content
             conn_l.info("Received a valid 'No Content' (204) response.")
+            location = resp.get('location', None)
             # Check response headers for updated Locatio
-            return (True, True)
+            return Deposit_Receipt(response_headers = dict(resp), location=location, code=204)
         elif resp['status'] == "200":
             #   Deposit receipt in content
             conn_l.info("Received a valid (200) OK response.")
             content_type = resp.get('content-type')
+            location = resp.get('location', None)
             if content_type == "application/atom+xml;type=entry" and len(content) > 0:
                 d = Deposit_Receipt(content)
                 if d.parsed:
                     conn_l.info("Server response included a Deposit Receipt. Caching a copy in .resources['%s']" % d.edit)
+                    d.response_headers = dict(resp)
+                    d.location = location
+                    d.code = 200
                     self._cache_deposit_receipt(d)
-                    return (d.edit, d)
-            return (True, True)
+                    return d
+            else:
+                # No atom entry...
+                d = Deposit_Receipt()
+                conn_l.info("Server response dir not include a Deposit Receipt Entry.")
+                d.response_headers = dict(resp)
+                d.location = location
+                d.content = content
+                return d
         else:
             return self._handle_error_response(resp, content)
         
@@ -665,10 +697,17 @@ Set the following parameters in addition to the basic parameters:
                     eg packaging = 'http://purl.org/net/sword/package/Binary'
         
 Response:
-    a tuple: (location, deposit_receipt)
-        location        -- Contents of the HTTP "Content-Location" in the response, if present
-        deposit_receipt -- `sword2.Deposit_Receipt` instance or None, if no receipt was given
 
+A `sword2.Deposit_Receipt` object containing the deposit receipt data. If the response was blank or 
+not a Deposit Response, then only a few attributes will be populated:
+            
+    `code` -- HTTP code of the response
+    `response_headers`  -- `dict` of the reponse headers
+    `content`  --  (Optional) in case the response body is not empty but the response is not a Deposit Receipt
+        
+If exception-throwing is turned off (`error_response_raises_exceptions = False` or `self.raise_except = False`)
+then the response will be a `sword2.Error_Document`, but will still have the aforementioned attributes set, (code,
+response_headers, etc)
 
 2. "Creating a Resource with an Atom Entry"
 -------------------------------------------
@@ -694,9 +733,17 @@ for example:
     # likely to want to add the thesis files later for example but get the identifier for the deposit now
 
 Response:
-    a tuple: (location, deposit_receipt)
-        location        -- Contents of the HTTP "Content-Location" in the response, if present
-        deposit_receipt -- `sword2.Deposit_Receipt` instance or None, if no receipt was given
+    
+A `sword2.Deposit_Receipt` object containing the deposit receipt data. If the response was blank or 
+not a Deposit Response, then only a few attributes will be populated:
+            
+    `code` -- HTTP code of the response
+    `response_headers`  -- `dict` of the reponse headers
+    `content`  --  (Optional) in case the response body is not empty but the response is not a Deposit Receipt
+        
+If exception-throwing is turned off (`error_response_raises_exceptions = False` or `self.raise_except = False`)
+then the response will be a `sword2.Error_Document`, but will still have the aforementioned attributes set, (code,
+response_headers, etc)
 
 3. "Creating a Resource with a Multipart Deposit"
 -------------------------------------------------
@@ -714,9 +761,17 @@ eg:
                 .... and so on
 
 Response:
-    a tuple: (location, deposit_receipt)
-        location        -- Contents of the HTTP "Content-Location" in the response, if present
-        deposit_receipt -- `sword2.Deposit_Receipt` instance or None, if no receipt was given
+    
+A `sword2.Deposit_Receipt` object containing the deposit receipt data. If the response was blank or 
+not a Deposit Response, then only a few attributes will be populated:
+            
+    `code` -- HTTP code of the response
+    `response_headers`  -- `dict` of the reponse headers
+    `content`  --  (Optional) in case the response body is not empty but the response is not a Deposit Receipt
+        
+If exception-throwing is turned off (`error_response_raises_exceptions = False` or `self.raise_except = False`)
+then the response will be a `sword2.Error_Document`, but will still have the aforementioned attributes set, (code,
+response_headers, etc)
 
 (under the hood, this request uses Atom Multipart-related)
 
@@ -755,16 +810,17 @@ The SWORD server is not required to support packaging formats, but this profile 
                                   request_type='Col_IRI POST')
         
     def update_resource(self, 
-                        edit_media_iri = None,  
-                        
                         payload,       # These need to be set to upload a file      
                         filename,      # According to spec, "The client MUST supply a Content-Disposition header with a filename parameter 
                                        #                     (note that this requires the filename be expressed in ASCII)."
                         mimetype=None,
                         packaging=None,
+                        
+                        edit_media_iri = None,
+                        
                         on_behalf_of=None,
                         in_progress=False, 
-                        metadata_relevant=False
+                        metadata_relevant=False,
                         # Pass back the deposit receipt to automatically get the right IRI to use
                         dr = None
                         ):
@@ -805,11 +861,17 @@ Set the following parameters in addition to the basic parameters (see `self.crea
                           or `False` if the server should not attempt to extract any metadata from the deposi
 
 Response:
-    a tuple: (location, deposit_receipt)
-        location        -- Contents of the HTTP "Content-Location" in the response, if present
-        deposit_receipt -- `sword2.Deposit_Receipt` instance or None, if no receipt was given
+    
+A `sword2.Deposit_Receipt` object containing the deposit receipt data. If the response was blank or 
+not a Deposit Response, then only a few attributes will be populated:
+            
+    `code` -- HTTP code of the response
+    `response_headers`  -- `dict` of the reponse headers
+    `content`  --  (Optional) in case the response body is not empty but the response is not a Deposit Receipt
         
-        The response may also be (True, True) if the request was successful, but no response was given (HTTP code 204 No Content)
+If exception-throwing is turned off (`error_response_raises_exceptions = False` or `self.raise_except = False`)
+then the response will be a `sword2.Error_Document`, but will still have the aforementioned attributes set, (code,
+response_headers, etc)
         """
         if not edit_media_iri:
             if dr != None:
@@ -835,8 +897,8 @@ Response:
                                   metadata_relevant=str(metadata_relevant),
                                   request_type='EM_IRI PUT')
 
-    def update_metadata_for_resource(self, edit_iri = None,
-                                           metadata_entry,    # required
+    def update_metadata_for_resource(self, metadata_entry,    # required
+                                           edit_iri = None,
                                            in_progress=False,
                                            on_behalf_of=None,
                                            dr = None
@@ -886,11 +948,17 @@ for example, to replace the metadata for a given:
               
 
 Response:
-    a tuple: (location, deposit_receipt)
-        location        -- Contents of the HTTP "Content-Location" in the response, if present
-        deposit_receipt -- `sword2.Deposit_Receipt` instance or None, if no receipt was given
+    
+A `sword2.Deposit_Receipt` object containing the deposit receipt data. If the response was blank or 
+not a Deposit Response, then only a few attributes will be populated:
+            
+    `code` -- HTTP code of the response
+    `response_headers`  -- `dict` of the reponse headers
+    `content`  --  (Optional) in case the response body is not empty but the response is not a Deposit Receipt
         
-        The response may also be (True, True) if the request was successful, but no response was given (HTTP code 204 No Content)
+If exception-throwing is turned off (`error_response_raises_exceptions = False` or `self.raise_except = False`)
+then the response will be a `sword2.Error_Document`, but will still have the aforementioned attributes set, (code,
+response_headers, etc)
         """
         if not edit_iri:
             if dr != None:
@@ -913,12 +981,13 @@ Response:
                                   request_type='Edit_IRI PUT')
         
     def add_file_to_resource(self, 
-                        edit_media_iri,  
-                        
+                        edit_media_iri,
                         payload,       # These need to be set to upload a file      
                         filename,      # According to spec, "The client MUST supply a Content-Disposition header with a filename parameter 
-                                       #                     (note that this requires the filename be expressed in ASCII)."
+                                       #                     (note that this requires the filename be expressed in ASCII)."  
                         mimetype=None,
+                        
+                        
                         on_behalf_of=None,
                         in_progress=False, 
                         metadata_relevant=False
@@ -947,9 +1016,17 @@ Set the following parameters in addition to the basic parameters:
                     eg packaging = 'http://purl.org/net/sword/package/Binary'
         
 Response:
-    a tuple: (location, deposit_receipt)
-        location        -- Contents of the HTTP "Content-Location" in the response, if present
-        deposit_receipt -- `sword2.Deposit_Receipt` instance or None, if no receipt was given
+    
+A `sword2.Deposit_Receipt` object containing the deposit receipt data. If the response was blank or 
+not a Deposit Response, then only a few attributes will be populated:
+            
+    `code` -- HTTP code of the response
+    `response_headers`  -- `dict` of the reponse headers
+    `content`  --  (Optional) in case the response body is not empty but the response is not a Deposit Receipt
+        
+If exception-throwing is turned off (`error_response_raises_exceptions = False` or `self.raise_except = False`)
+then the response will be a `sword2.Error_Document`, but will still have the aforementioned attributes set, (code,
+response_headers, etc)
 
         """
         conn_l.info("Appending file to a deposit via Edit-Media-IRI %s" % edit_media_iri)
@@ -963,17 +1040,17 @@ Response:
                                   request_type='EM_IRI POST (APPEND)')
 
     def add_new_item_to_container(self, 
-                        se_iri,  
+                        se_iri = None,  
                         
-                        payload=None,       # These need to be set to upload a file      
-                        filename=None,      # According to spec, "The client MUST supply a Content-Disposition header with a filename parameter 
+                        payload = None,       # These need to be set to upload a file      
+                        filename = None,      # According to spec, "The client MUST supply a Content-Disposition header with a filename parameter 
                                             #                     (note that this requires the filename be expressed in ASCII)."
-                        mimetype=None,
-                        packaging=None,
-                        on_behalf_of=None,
-                        metadata_entry=None,
-                        metadata_relevant=False,
-                        in_progress=False,
+                        mimetype = None,
+                        packaging = None,
+                        on_behalf_of = None,
+                        metadata_entry = None,
+                        metadata_relevant = False,
+                        in_progress = False,
                         dr = None
                         ):
         """
@@ -1011,9 +1088,17 @@ Set the following parameters in addition to the basic parameters:
                     eg packaging = 'http://purl.org/net/sword/package/Binary'
         
 Response:
-    a tuple: (location, deposit_receipt)
-        location        -- Contents of the HTTP "Content-Location" in the response, if present
-        deposit_receipt -- `sword2.Deposit_Receipt` instance or None, if no receipt was given
+    
+A `sword2.Deposit_Receipt` object containing the deposit receipt data. If the response was blank or 
+not a Deposit Response, then only a few attributes will be populated:
+            
+    `code` -- HTTP code of the response
+    `response_headers`  -- `dict` of the reponse headers
+    `content`  --  (Optional) in case the response body is not empty but the response is not a Deposit Receipt
+        
+If exception-throwing is turned off (`error_response_raises_exceptions = False` or `self.raise_except = False`)
+then the response will be a `sword2.Error_Document`, but will still have the aforementioned attributes set, (code,
+response_headers, etc)
 
 
 2. "Adding New Metadata to a Container"
@@ -1034,9 +1119,17 @@ for example:
     ...                                metadata_entry = entry)
               
 Response:
-    a tuple: (location, deposit_receipt)
-        location        -- Contents of the HTTP "Content-Location" in the response, if present
-        deposit_receipt -- `sword2.Deposit_Receipt` instance or None, if no receipt was given
+    
+A `sword2.Deposit_Receipt` object containing the deposit receipt data. If the response was blank or 
+not a Deposit Response, then only a few attributes will be populated:
+            
+    `code` -- HTTP code of the response
+    `response_headers`  -- `dict` of the reponse headers
+    `content`  --  (Optional) in case the response body is not empty but the response is not a Deposit Receipt
+        
+If exception-throwing is turned off (`error_response_raises_exceptions = False` or `self.raise_except = False`)
+then the response will be a `sword2.Error_Document`, but will still have the aforementioned attributes set, (code,
+response_headers, etc)
 
 3. "Adding New Metadata and Packages or Files to a Container with Multipart"
 ----------------------------------------------------------------------------
@@ -1054,9 +1147,17 @@ eg:
                 .... and so on
 
 Response:
-    a tuple: (location, deposit_receipt)
-        location        -- Contents of the HTTP "Content-Location" in the response, if present
-        deposit_receipt -- `sword2.Deposit_Receipt` instance or None, if no receipt was given
+    
+A `sword2.Deposit_Receipt` object containing the deposit receipt data. If the response was blank or 
+not a Deposit Response, then only a few attributes will be populated:
+            
+    `code` -- HTTP code of the response
+    `response_headers`  -- `dict` of the reponse headers
+    `content`  --  (Optional) in case the response body is not empty but the response is not a Deposit Receipt
+        
+If exception-throwing is turned off (`error_response_raises_exceptions = False` or `self.raise_except = False`)
+then the response will be a `sword2.Error_Document`, but will still have the aforementioned attributes set, (code,
+response_headers, etc)
 
         """
         
@@ -1107,7 +1208,7 @@ Can be given the optional parameter of `on_behalf_of`.
                                          on_behalf_of = None,
                                          dr = None):
     
-    """
+        """
 Deleting the Content of a Resource    
     
 Remove all the content of a resource without removing the resource itself
@@ -1128,8 +1229,7 @@ Set `edit_media_iri` to be the Edit-Media-IRI for a given resource.
 
 you can pass back the `sword2.Deposit_Receipt` object you got from a previous transaction as the `dr` parameter, 
 and the correct IRI will automatically be chosen.
-
-    """
+        """
         if not edit_media_iri:
             if dr != None:
                 conn_l.info("Using the deposit receipt to get the Edit-Media-IRI")
@@ -1151,10 +1251,10 @@ and the correct IRI will automatically be chosen.
 
 
     def delete_container(self, edit_iri = None,
-                                         on_behalf_of = None,
-                                         dr = None):
+                               on_behalf_of = None,
+                               dr = None):
     
-    """
+        """
 Deleting the Container    
     
 Delete the entire object on the server, effectively removing the deposit entirely.
@@ -1176,7 +1276,7 @@ Set `edit_iri` to be the Edit-IRI for a given resource.
 you can pass back the `sword2.Deposit_Receipt` object you got from a previous transaction as the `dr` parameter, 
 and the correct IRI will automatically be chosen.
 
-    """
+        """
         if not edit_iri:
             if dr != None:
                 conn_l.info("Using the deposit receipt to get the Edit-IRI")
@@ -1250,7 +1350,7 @@ IN PROGRESS - USE AT OWN RISK.... see `sword2.Sword_Statement`.
         # get the statement first
         conn_l.debug("Trying to GET the ATOM Sword Statement at %s." % sword_statement_iri)
         response = self.get_resource(sword_statement_iri, headers = {'Accept':'application/atom+xml;type=feed'})
-        if response.resp:
+        if response.code == 200:
             #try:
             if True:
                 conn_l.debug("Attempting to parse the response as a ATOM Sword Statement")
@@ -1294,7 +1394,7 @@ and the correct IRI will automatically be chosen.
 Response:
     
     A `ContentWrapper` - 
-        `ContentWrapper.resp`    -- response headers
+        `ContentWrapper.response_headers`    -- response headers
         `ContentWrapper.content` -- body of response from server (the file or package)
         `ContentWrapper.code`    -- status code ('200' on success.)
 
@@ -1351,7 +1451,7 @@ Response:
             conn_l.debug("Cont_IRI GET resource successful - got %s bytes from %s" % (len(content), content_iri))
             class ContentWrapper(object):
                 def __init__(self, resp, content):
-                    self.resp = resp
+                    self.response_headers = dict(resp)
                     self.content = content
                     self.code = resp.status
             return ContentWrapper(resp, content)

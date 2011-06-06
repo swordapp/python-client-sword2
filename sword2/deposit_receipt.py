@@ -19,7 +19,7 @@ from compatible_libs import etree
 from utils import NS, get_text
 
 class Deposit_Receipt(object):
-    def __init__(self, xml_deposit_receipt=None, dom=None):
+    def __init__(self, xml_deposit_receipt=None, dom=None, response_headers={}, location=None, code=0):
         """
 `Deposit_Receipt` - provides convenience methods for extracting information from the Deposit Receipts sent back by the 
 SWORD2-compliant server for many transactions.
@@ -93,18 +93,16 @@ Availible attributes:
                                 `None`
     
     `self.packaging`        -- sword:packaging elements declaring the formats that the Media Resource can be retrieved in   (`list` of `str`)
+    
+    `self.response_headers` -- The HTTP response headers that accompanied this receipt
+    
+    `self.location`         -- The location, if given (from HTTP Header: "Location: ....")
     """
         self.parsed = False
-        if xml_deposit_receipt:
-            try:
-                self.dom = etree.fromstring(xml_deposit_receipt)
-                self.parsed = True
-            except Exception, e:
-                d_l.error("Was not able to parse the deposit receipt as XML.")
-                return
-        elif dom != None:
-            self.dom = dom
-            self.parsed = True
+        self.response_headers=response_headers
+        self.location = location
+        self.content = None
+        self.code = code
         self.metadata = {}
         self.links = {}
         self.edit = None
@@ -122,7 +120,19 @@ Availible attributes:
         self.categories = []
         self.content = {}
         self.cont_iri = None
-        self.handle_metadata()
+        
+        if xml_deposit_receipt:
+            try:
+                self.dom = etree.fromstring(xml_deposit_receipt)
+                self.parsed = True
+            except Exception, e:
+                d_l.error("Was not able to parse the deposit receipt as XML.")
+                return
+            self.handle_metadata()
+        elif dom != None:
+            self.dom = dom
+            self.parsed = True
+            self.handle_metadata()
     
     def handle_metadata(self):
         """Method that walks the `etree.SubElement`, assigning the information to the objects attributes."""
