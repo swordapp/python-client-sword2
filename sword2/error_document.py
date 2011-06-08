@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+Provides a convenience class for handling and parsing Error Document responses.
+"""
 
 from deposit_receipt import Deposit_Receipt
 from server_errors import SWORD2ERRORSBYIRI, get_error

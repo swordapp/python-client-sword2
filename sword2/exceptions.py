@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+Provides various Exception classes to match HTTP error code responses.
+"""
 
 class HTTPResponseError(Exception):
     """Generic exception for http codes greater than 399 and less than 599 """

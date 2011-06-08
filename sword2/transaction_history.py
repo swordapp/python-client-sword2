@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""
+Provides a class to hold the `sword2.Connection` transaction history and give simple means for export (JSON) and reporting.
+"""
+
 from sword2_logging import logging
 
 from datetime import datetime

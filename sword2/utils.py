@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""
+Utility methods used within the module
+"""
+
 from sword2_logging import logging
 utils_l = logging.getLogger(__name__)
 
@@ -23,6 +27,11 @@ NS['atom'] = "{http://www.w3.org/2005/Atom}%s"
 NS['app'] = "{http://www.w3.org/2007/app}%s"
 
 def get_text(parent, tag, plural = False):
+    """Takes an `etree.Element` and a tag name to search for and retrieves the text attribute from any
+    of the parent element's direct children.
+    
+    Returns a simple `str` if only a single element is found, or a list if multiple elements with the
+    same tag. Ignores element attributes, returning only the text."""
     text = None
     for item in parent.findall(tag):
         t = item.text
@@ -38,6 +47,10 @@ def get_text(parent, tag, plural = False):
     return text
 
 def get_md5(data):
+    """Takes either a `str` or a file-like object and passes back a tuple containing (md5sum, filesize)
+    
+    The file is streamed as 1Mb chunks so should work for large files. File-like object must support `seek()`
+    """
     if hasattr(data, "read") and hasattr(data, 'seek'):
         m = md5()
         chunk = data.read(1024*1024)   # 1Mb
@@ -56,12 +69,55 @@ def get_md5(data):
         
 
 class Timer(object):
+    """Simple timer, providing a 'stopwatch' mechanism.
+    
+    Usage example:
+        
+    >>> from sword2.utils import Timer
+    >>> from time import sleep
+    >>> t = Timer()
+    >>> t.get_timestamp()
+    datetime.datetime(2011, 6, 7, 7, 40, 53, 87248)
+    >>> t.get_loggable_timestamp()
+    '2011-06-07T07:40:53.087516'
+
+    >>> # Start a few timers
+    ... t.start("kaylee", "river", "inara")
+    >>> sleep(3)   # wait a little while
+    >>> t.time_since_start("kaylee")
+    (0, 3.0048139095306396)
+
+    # tuple -> (index of the logged .duration, time since the .start method was called)
+    # eg 't.duration['kaylee'][0]' would equal 3.00481.... 
+
+    >>> sleep(2)
+    >>> t.time_since_start("kaylee", "inara")
+    [(1, 5.00858998298645), (0, 5.00858998298645)]
+    >>> sleep(5)
+    >>> t.time_since_start("kaylee", "river")
+    [(2, 10.015379905700684), (0, 10.015379905700684)]
+    >>> sleep(4)
+    >>> t.time_since_start("kaylee", "inara", "river")
+    [(3, 14.021538972854614), (1, 14.021538972854614), (1, 14.021538972854614)]
+    
+    # The order of the response is the same as the order of the names in the method call.
+    
+    >>> # report back
+    ... t.duration['kaylee']
+    [3.0048139095306396, 5.00858998298645, 10.015379905700684, 14.021538972854614]
+    >>> t.duration['inara']
+    [5.00858998298645, 14.021538972854614]
+    >>> t.duration['river']
+    [10.015379905700684, 14.021538972854614]
+    >>> 
+    """
     def __init__(self):
         self.reset_all()
         
     def reset_all(self):
         self.counts = {}    
         self.duration = {}
+        self.stop = {}
 
     def reset(self, name):
         if name in self.counts:
@@ -76,9 +132,16 @@ class Timer(object):
         else:
             return None
 
-    def start(self, name):
-        self.counts[name] = time()
-        
+    def start(self, *args):
+        st_time = time()
+        for arg in args:
+            self.counts[arg] = st_time
+
+    def stop(self, *args):
+        st_time = time()
+        for arg in args:
+            self.stop[arg] = st_time
+    
     def get_timestamp(self):
         # Convenience function
         return datetime.now()
@@ -87,13 +150,22 @@ class Timer(object):
         """Human-readable by intent"""
         return datetime.now().isoformat()
         
-    def time_since_start(self, name):
-        if name in self.counts:
-            duration = time() - self.counts[name]
-            if not self.duration.has_key(name):
-                self.duration[name] = []
-            self.duration[name].append(duration)
-            return (len(self.duration[name]), duration)
+    def time_since_start(self, *args):
+        r = []
+        st_time = time()
+        for name in args:
+            if name in self.counts:
+                duration = st_time - self.counts[name]
+                if not self.duration.has_key(name):
+                    self.duration[name] = []
+                self.duration[name].append(duration)
+                r.append((len(self.duration[name]) - 1, duration))
+            else:
+                r.append((0, 0))
+        if len(r) == 1:
+            return r.pop()
+        else:
+            return r
             
 
 def get_content_type(filename):

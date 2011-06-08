@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""
+`sword2` logging
+"""
+
 import logging
 import logging.config
 from os import path as os_path
