@@ -230,6 +230,7 @@ class SDCollection(object):
         if json:
             _j = {'title':self.title,
                   'href':self.href,
+                  'description':self.description,
                   'accept':self.accept,
                   'accept_multipart':self.accept_multipart,
                   'mediation':self.mediation,
@@ -245,8 +246,9 @@ class SDCollection(object):
 
 class Collection_Feed(object):
     """Nothing to see here yet. Move along."""
-    def __init__(self, feed_iri=None, http_client=None):
+    def __init__(self, feed_iri=None, http_client=None, feed_xml=None):
         self.feed_xml = feed_xml
+        self.feed_iri = feed_iri
         self._cached = []
         self.h = http_client
         
@@ -275,7 +277,7 @@ class Sword_Statement(object):
             self.feed = etree.fromstring(xml_document)
             self.parsed = True
         except Exception, e:
-            coll_l.error("Failed to parse document")
+            coll_l.error("Failed to parse document - %s" % e)
             coll_l.error("XML document begins:\n %s" % xml_document[:300])
         self.enumerate_feed()
 

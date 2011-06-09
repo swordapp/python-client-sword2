@@ -195,7 +195,7 @@ def create_multipart_related(payloads):
         if payload.get('type', None):
             body.append('Content-Type: %(type)s' % payload)
         else:
-            body.append('Content-Type: %s' % get_content_type(filename))
+            body.append('Content-Type: %s' % get_content_type(payload.get("filename")))
             
         if payload.get('filename', None):
             body.append('Content-Disposition: attachment; name="%(key)s"; filename="%(filename)s"' % (payload))

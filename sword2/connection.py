@@ -471,6 +471,8 @@ Loading in a locally held Service Document:
         if suggested_identifier:
             headers['Slug'] = str(suggested_identifier)
         
+        if metadata_relevant:
+            headers['Metadata-Relevant'] = str(metadata_relevant).lower()
         
         if hasattr(payload, 'read'):
             # Need to work out why a 401 challenge will stop httplib2 from sending the file...
@@ -794,7 +796,7 @@ The SWORD server is not required to support packaging formats, but this profile 
                             break
 
         if not col_iri:   # no col_iri provided and no valid workspace/collection given
-            coll_l.error("No suitable Col-IRI was found, with the given parameters.")
+            conn_l.error("No suitable Col-IRI was found, with the given parameters.")
             return
         
         return self._make_request(target_iri = col_iri,
@@ -803,13 +805,13 @@ The SWORD server is not required to support packaging formats, but this profile 
                                   filename=filename,
                                   packaging=packaging,
                                   metadata_entry=metadata_entry,
-                                  suggested_identifier=None,
-                                  in_progress=True,
+                                  suggested_identifier=suggested_identifier,
+                                  in_progress=in_progress,
                                   on_behalf_of=on_behalf_of,
                                   method="POST",
                                   request_type='Col_IRI POST')
         
-    def update_resource(self, 
+    def update_files_for_resource(self, 
                         payload,       # These need to be set to upload a file      
                         filename,      # According to spec, "The client MUST supply a Content-Disposition header with a filename parameter 
                                        #                     (note that this requires the filename be expressed in ASCII)."
@@ -930,7 +932,7 @@ Then, add in the metadata:
 --------------------------
 
 Set the following in addition to the basic parameters:
-    
+
     `metadata_entry`  - An instance of `sword2.Entry`, set with the metadata required.
     
 for example, to replace the metadata for a given:
@@ -979,6 +981,232 @@ response_headers, etc)
                                   in_progress=in_progress, 
                                   method="PUT",
                                   request_type='Edit_IRI PUT')
+
+    def update_metadata_and_files_for_resource(self, metadata_entry,    # required
+                                                     payload,       # These need to be set to upload a file      
+                                                     filename,      # According to spec, "The client MUST supply a Content-Disposition header with a filename parameter 
+                                                                    #                     (note that this requires the filename be expressed in ASCII)."
+                                                     mimetype=None,
+                                                     packaging=None,
+                                                     
+                                                     edit_iri = None,
+                        
+                                                     metadata_relevant=False,
+                                                     in_progress=False,
+                                                     on_behalf_of=None,
+                                                     dr = None
+                                              ):
+        """
+Replacing the Metadata and Files of a Resource
+
+#BETASWORD2URL
+See http://sword-app.svn.sourceforge.net/viewvc/sword-app/spec/trunk/SWORDProfile.html?revision=HEAD#protocoloperations_editingcontent_multipart
+
+Replace the metadata and files of a resource as identified by its Edit-IRI. 
+
+Usage:
+------
+
+Set the target for this request:
+--------------------------------
+
+Set the `edit_iri` parameter to the Edit-IRI.
+
+    OR 
+
+you can pass back the `sword2.Deposit_Receipt` object you got from a previous transaction as the `dr` parameter, 
+and the correct IRI will automatically be chosen.
+
+Then, add in the file and metadata information:
+-----------------------------------------------
+Set the following in addition to the basic parameters:
+
+File information:
+
+    `payload`   - the payload to send. Can be either a bytestring or a File-like object that supports `payload.read()`
+    `mimetype`  - MIMEType of the payload
+    `filename`  - filename. Most SWORD2 uploads have this as being mandatory.
+    `packaging` - the SWORD2 packaging type of the payload. 
+                    eg packaging = 'http://purl.org/net/sword/package/Binary'
+                    
+    `metadata_relevant` - This should be set to `True` if the server should consider the file a potential source of metadata extraction, 
+                          or `False` if the server should not attempt to extract any metadata from the deposi
+    
+Metadata information:
+
+    `metadata_entry`  - An instance of `sword2.Entry`, set with the metadata required.
+    
+for example, to create a metadata entry
+    >>> from sword2 import Entry
+    >>> entry = Entry(title = "My new deposit",
+    ...               id = "new:id",    # atom:id
+    ...               dcterms_abstract = "My Thesis",
+    ...               dcterms_author = "Ben",
+    ...               dcterms_issued = "2010")
+    
+Response:
+    
+A `sword2.Deposit_Receipt` object containing the deposit receipt data. If the response was blank or 
+not a Deposit Response, then only a few attributes will be populated:
+            
+    `code` -- HTTP code of the response
+    `response_headers`  -- `dict` of the reponse headers
+    `content`  --  (Optional) in case the response body is not empty but the response is not a Deposit Receipt
+        
+If exception-throwing is turned off (`error_response_raises_exceptions = False` or `self.raise_except = False`)
+then the response will be a `sword2.Error_Document`, but will still have the aforementioned attributes set, (code,
+response_headers, etc)
+        """
+        if not edit_iri:
+            if dr != None:
+                conn_l.info("Using the deposit receipt to get the Edit-IRI")
+                edit_iri = dr.edit
+                if edit_iri:
+                    conn_l.info("Update Resource via Edit-IRI %s" % edit_iri)
+                else:
+                    raise Exception("No Edit-IRI was given and no suitable IRI was found in the deposit receipt.")   
+            else:
+                raise Exception("No Edit-IRI was given")
+        else:
+            conn_l.info("Update Resource via Edit-IRI %s" % edit_iri)
+
+        return self._make_request(target_iri = edit_iri,
+                                  metadata_entry=metadata_entry, 
+                                  payload=payload,
+                                  mimetype=mimetype,
+                                  filename=filename,
+                                  packaging=packaging,
+                                  on_behalf_of=on_behalf_of,
+                                  in_progress=in_progress,
+                                  metadata_relevant=str(metadata_relevant),
+                                  method="PUT",
+                                  request_type='Edit_IRI PUT')
+
+    def update_resource(self, metadata_entry = None,    # required for a metadata update
+                             payload = None,            # required for a file update      
+                             filename = None,           # required for a file update
+                             mimetype=None,             # required for a file update
+                             packaging=None,            # required for a file update
+                             
+                             dr = None,     # Important! Without this, you will have to set the edit_iri AND the edit_media_iri parameters.
+                             
+                             edit_iri = None,
+                             edit_media_iri = None,
+
+                             metadata_relevant=False,
+                             in_progress=False,
+                             on_behalf_of=None,
+                      ):
+        """
+Replacing the Metadata and/or Files of a Resource
+
+#BETASWORD2URL
+See http://sword-app.svn.sourceforge.net/viewvc/sword-app/spec/trunk/SWORDProfile.html?revision=HEAD#protocoloperations_editingcontent_multipart
+
+Replace the metadata and/or files of a resource.
+
+This wraps a number of methods and relies on being passed the Deposit Receipt, as the target IRI changes depending 
+on whether the metadata, the files or both are to be updated by the request. 
+
+This method has the same functionality as the following methods:
+    update_files_for_resource
+    update_metadata_for_resource
+    update_metadata_and_files_for_resource
+
+Usage:
+------
+
+Set the target for this request:
+--------------------------------
+
+You MUST pass back the `sword2.Deposit_Receipt` object you got from a previous transaction as the `dr` parameter, 
+and the correct IRI will automatically be chosen based on what combination of files you want to upload.
+
+Then, add in the metadata and/or file information as desired:
+-------------------------------------------------------------
+
+File information requires:
+
+    `payload`   - the payload to send. Can be either a bytestring or a File-like object that supports `payload.read()`
+    `mimetype`  - MIMEType of the payload
+    `filename`  - filename. Most SWORD2 uploads have this as being mandatory.
+    `packaging` - the SWORD2 packaging type of the payload. 
+                    eg packaging = 'http://purl.org/net/sword/package/Binary'
+                    
+    `metadata_relevant` - This should be set to `True` if the server should consider the file a potential source of metadata extraction, 
+                          or `False` if the server should not attempt to extract any metadata from the deposi
+    
+Metadata information requires:
+
+    `metadata_entry`  - An instance of `sword2.Entry`, set with the metadata required.
+    
+for example, to create a metadata entry
+    >>> from sword2 import Entry
+    >>> entry = Entry(title = "My new deposit",
+    ...               id = "new:id",    # atom:id
+    ...               dcterms_abstract = "My Thesis",
+    ...               dcterms_author = "Ben",
+    ...               dcterms_issued = "2010")
+
+Response:
+    
+A `sword2.Deposit_Receipt` object containing the deposit receipt data. If the response was blank or 
+not a Deposit Response, then only a few attributes will be populated:
+            
+    `code` -- HTTP code of the response
+    `response_headers`  -- `dict` of the reponse headers
+    `content`  --  (Optional) in case the response body is not empty but the response is not a Deposit Receipt
+        
+If exception-throwing is turned off (`error_response_raises_exceptions = False` or `self.raise_except = False`)
+then the response will be a `sword2.Error_Document`, but will still have the aforementioned attributes set, (code,
+response_headers, etc)
+        """
+        target_iri = None
+        request_type = "Update PUT"
+        if metadata_entry != None:
+            # Metadata or Metadata + file --> Edit-IRI
+            conn_l.info("Using the Edit-IRI - Metadata or Metadata + file multipart-related uses a PUT request to the Edit-IRI")
+            if payload != None and filename != None:
+                request_type = "Update Multipart PUT"
+            else:
+                request_type = "Update Metadata PUT"
+            if dr != None and dr.edit != None:
+                conn_l.info("Using the deposit receipt to get the Edit-IRI: %s" % dr.edit)
+                target_iri = dr.edit
+            elif edit_iri != None:
+                conn_l.info("Using the %s receipt as the Edit-IRI" % edit_iri)
+                target_iri = edit_iri
+            else:
+                conn_l.error("Metadata or Metadata + file multipart-related update: Cannot find the Edit-IRI from the parameters supplied.")
+        elif payload != None and filename != None:
+            # File-only --> Edit-Media-IRI
+            conn_l.info("Using the Edit-Media-IRI - File update uses a PUT request to the Edit-Media-IRI")
+            request_type = "Update File PUT"
+            if dr != None and dr.edit_media != None:
+                conn_l.info("Using the deposit receipt to get the Edit-Media-IRI: %s" % dr.edit_media)
+                target_iri = dr.edit_media
+            elif edit_media_iri != None:
+                conn_l.info("Using the %s receipt as the Edit-Media-IRI" % edit_media_iri)
+                target_iri = edit_media_iri
+            else:
+                conn_l.error("File update: Cannot find the Edit-Media-IRI from the parameters supplied.")
+            
+        if target_iri == None:
+            raise Exception("No suitable IRI was found for the request needed.")
+
+        return self._make_request(target_iri = target_iri,
+                                  metadata_entry=metadata_entry, 
+                                  payload=payload,
+                                  mimetype=mimetype,
+                                  filename=filename,
+                                  packaging=packaging,
+                                  on_behalf_of=on_behalf_of,
+                                  in_progress=in_progress,
+                                  metadata_relevant=str(metadata_relevant),
+                                  method="PUT",
+                                  request_type=request_type)
+
+
         
     def add_file_to_resource(self, 
                         edit_media_iri,
@@ -1035,6 +1263,7 @@ response_headers, etc)
                                   mimetype=mimetype,
                                   filename=filename,
                                   on_behalf_of=on_behalf_of,
+                                  in_progress=in_progress,
                                   method="POST",
                                   metadata_relevant=metadata_relevant,
                                   request_type='EM_IRI POST (APPEND)')
@@ -1288,7 +1517,7 @@ and the correct IRI will automatically be chosen.
             else:
                 raise Exception("No Edit-IRI was given")
         else:
-            conn_l.info("Deleting Container via Edit-IRI %s" % edit_media_iri)
+            conn_l.info("Deleting Container via Edit-IRI %s" % edit_iri)
 
         return self.delete_resource(edit_iri,
                                     on_behalf_of = on_behalf_of)
