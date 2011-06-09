@@ -107,7 +107,7 @@ class TestConnection(TestController):
    
     def test_06_Simple_POST_to_sss(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
-        resp = conn.create_resource(payload = "Payload is just a load of text", 
+        resp = conn.create(payload = "Payload is just a load of text", 
                                     mimetype = "text/plain", 
                                     filename = "readme.txt", 
                                     packaging = 'http://purl.org/net/sword/package/Binary', 
@@ -120,7 +120,7 @@ class TestConnection(TestController):
     def test_07_Multipart_POST_to_sss(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
-        resp = conn.create_resource(payload = "Multipart payload here", 
+        resp = conn.create(payload = "Multipart payload here", 
                                     metadata_entry = e, 
                                     mimetype = "text/plain", 
                                     filename = "readme.txt", 
@@ -133,7 +133,7 @@ class TestConnection(TestController):
       
     def test_08_Simple_POST_to_sss_w_coliri(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
-        resp = conn.create_resource(payload = "Payload is just a load of text", 
+        resp = conn.create(payload = "Payload is just a load of text", 
                                     mimetype = "text/plain", 
                                     filename = "readme.txt", 
                                     packaging = 'http://purl.org/net/sword/package/Binary',
@@ -145,20 +145,20 @@ class TestConnection(TestController):
     def test_09_Multipart_POST_to_sss_w_coliri(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
-        resp = conn.create_resource(payload = "Multipart payload here", 
+        resp = conn.create(payload = "Multipart payload here", 
                                     metadata_entry = e, 
                                     mimetype = "text/plain", 
                                     filename = "readme.txt", 
                                     packaging = 'http://purl.org/net/sword/package/Binary',
                                     col_iri = conn.sd.workspaces[0][1][0].href, 
                                     in_progress=True)
-        assert resp != (None, None)
+        assert resp != None
 
 
     def test_10_Multipart_POST_then_update_on_EM_IRI(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
-        deposit_receipt = conn.create_resource(payload = "Multipart_POST_then_update_on_EM_IRI", 
+        deposit_receipt = conn.create(payload = "Multipart_POST_then_update_on_EM_IRI", 
                                     metadata_entry = e, 
                                     mimetype = "text/plain", 
                                     filename = "readme.txt", 
@@ -166,7 +166,7 @@ class TestConnection(TestController):
                                     col_iri = conn.workspaces[0][1][0].href, 
                                     in_progress=True)
         assert deposit_receipt.edit_media != None
-        dr = conn.update_resource(payload = "Multipart_POST_then_update_on_EM_IRI  -- updated resource",
+        dr = conn.update(payload = "Multipart_POST_then_update_on_EM_IRI  -- updated resource",
                                               mimetype = "text/plain",
                                               filename = "readthis.txt",
                                               packaging = "http://purl.org/net/sword/package/Binary",
@@ -176,7 +176,7 @@ class TestConnection(TestController):
     def test_11_Multipart_POST_then_update_metadata_on_Edit_IRI(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
-        deposit_receipt = conn.create_resource(payload = "Multipart_POST_then_update_on_EM_IRI", 
+        deposit_receipt = conn.create(payload = "Multipart_POST_then_update_on_EM_IRI", 
                                     metadata_entry = e, 
                                     mimetype = "text/plain", 
                                     filename = "readme.txt", 
@@ -194,28 +194,28 @@ class TestConnection(TestController):
     def test_12_Metadata_POST_to_sss(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
-        resp = conn.create_resource(metadata_entry = e,
+        resp = conn.create(metadata_entry = e,
                                     workspace='Main Site', 
                                     collection=conn.sd.workspaces[0][1][0].title, 
                                     in_progress=True)
-        assert resp != (None, None)
+        assert resp != None
     
     
     def test_13_Metadata_POST_to_sss_altering_entry(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
         e.add_fields(dcterms_identifier="doi://somerubbish", dcterms_foo="blah blah")
-        resp = conn.create_resource(metadata_entry = e,
+        resp = conn.create(metadata_entry = e,
                                     workspace='Main Site', 
                                     collection=conn.sd.workspaces[0][1][0].title, 
                                     in_progress=False)
-        assert resp != (None, None)
+        assert resp != None
 
     def test_14_Invalid_Packaging_cached_receipt(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", 
                           download_service_document=True, honour_receipts=True)
         col_iri = conn.sd.workspaces[0][1][0].href  # pick the first collection
-        dr = conn.create_resource(payload = "Payload is just a load of text", 
+        dr = conn.create(payload = "Payload is just a load of text", 
                                     mimetype = "text/plain", 
                                     filename = "readme.txt", 
                                     packaging = 'http://purl.org/net/sword/package/Binary',
@@ -232,7 +232,7 @@ class TestConnection(TestController):
     def test_15_Metadata_POST_to_sss_w_coliri(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
-        dr = conn.create_resource(metadata_entry = e,
+        dr = conn.create(metadata_entry = e,
                                     col_iri = conn.sd.workspaces[0][1][0].href, 
                                     in_progress=True)
         assert dr.code == 201
@@ -241,7 +241,7 @@ class TestConnection(TestController):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", 
                           download_service_document=True, honour_receipts=True)
         col_iri = conn.sd.workspaces[0][1][0].href  # pick the first collection
-        dr = conn.create_resource(payload = "Payload is just a load of text", 
+        dr = conn.create(payload = "Payload is just a load of text", 
                                     mimetype = "text/plain", 
                                     filename = "readme.txt", 
                                     packaging = 'http://purl.org/net/sword/package/Binary',
@@ -259,7 +259,7 @@ class TestConnection(TestController):
     def test_17_Simple_POST_and_GET(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
         col_iri = conn.sd.workspaces[0][1][0].href  # pick the first collection
-        dr = conn.create_resource(payload = "Simple_POST_and_GET", 
+        dr = conn.create(payload = "Simple_POST_and_GET", 
                                     mimetype = "text/plain", 
                                     filename = "readme.txt", 
                                     packaging = 'http://purl.org/net/sword/package/Binary',
@@ -276,7 +276,7 @@ class TestConnection(TestController):
     def test_18_Metadata_POST_to_se_iri(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
-        deposit_receipt = conn.create_resource(payload = "Multipart_POST_then_update_on_EM_IRI", 
+        deposit_receipt = conn.create(payload = "Multipart_POST_then_update_on_EM_IRI", 
                                     metadata_entry = e, 
                                     mimetype = "text/plain", 
                                     filename = "readme.txt", 
@@ -286,7 +286,7 @@ class TestConnection(TestController):
                                     
         assert deposit_receipt.se_iri != None
         e.add_fields(dcterms_identifier="doi://somerubbish", dcterms_foo="blah blah")
-        dr = conn.add_new_item_to_container(se_iri = deposit_receipt.se_iri,
+        dr = conn.append(se_iri = deposit_receipt.se_iri,
                                               metadata_entry = e,
                                               in_progress=False)
         assert dr.code == 201       
@@ -294,7 +294,7 @@ class TestConnection(TestController):
     def test_19_File_POST_to_se_iri(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
-        deposit_receipt = conn.create_resource(payload = "Multipart_POST_then_update_on_EM_IRI", 
+        deposit_receipt = conn.create(payload = "Multipart_POST_then_update_on_EM_IRI", 
                                     metadata_entry = e, 
                                     mimetype = "text/plain", 
                                     filename = "readme.txt", 
@@ -303,7 +303,7 @@ class TestConnection(TestController):
                                     in_progress=True)
                                     
         assert deposit_receipt.se_iri != None
-        dr = conn.add_new_item_to_container(se_iri = deposit_receipt.se_iri,
+        dr = conn.append(se_iri = deposit_receipt.se_iri,
                                               payload = "Multipart_POST_then_appending_file_on_SE_IRI  -- updated resource",
                                               mimetype = "text/plain",
                                               filename = "readthisextrafile.txt",
@@ -313,7 +313,7 @@ class TestConnection(TestController):
     def test_20_Multipart_POST_to_se_iri(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
-        deposit_receipt = conn.create_resource(payload = "Multipart_POST_then_update_on_EM_IRI", 
+        deposit_receipt = conn.create(payload = "Multipart_POST_then_update_on_EM_IRI", 
                                     metadata_entry = e, 
                                     mimetype = "text/plain", 
                                     filename = "readme.txt", 
@@ -323,7 +323,7 @@ class TestConnection(TestController):
                                     
         assert deposit_receipt.se_iri != None
         e.add_fields(dcterms_identifier="doi://multipart_update_to_SE_IRI")
-        dr = conn.add_new_item_to_container(se_iri = deposit_receipt.se_iri,
+        dr = conn.append(se_iri = deposit_receipt.se_iri,
                                               payload = "Multipart_POST_then_appending_file_on_SE_IRI  -- updated resource",
                                               mimetype = "text/plain",
                                               filename = "readthisextrafile.txt",
@@ -336,7 +336,7 @@ class TestConnection(TestController):
     def test_21_Create_deposit_and_delete_content(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
-        deposit_receipt = conn.create_resource(payload = "Multipart_POST_then_update_on_EM_IRI", 
+        deposit_receipt = conn.create(payload = "Multipart_POST_then_update_on_EM_IRI", 
                                     metadata_entry = e, 
                                     mimetype = "text/plain", 
                                     filename = "readme.txt", 
@@ -344,14 +344,14 @@ class TestConnection(TestController):
                                     col_iri = conn.sd.workspaces[0][1][0].href, 
                                     in_progress=True)
         assert deposit_receipt.edit_media != None
-        dr = conn.delete_resource(resource_iri = deposit_receipt.edit_media)
+        dr = conn.delete(resource_iri = deposit_receipt.edit_media)
         assert dr.code == 204 or dr.code == 200
 
 
     def test_22_Create_deposit_and_delete_deposit(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
-        deposit_receipt = conn.create_resource(payload = "Multipart_POST_then_update_on_EM_IRI", 
+        deposit_receipt = conn.create(payload = "Multipart_POST_then_update_on_EM_IRI", 
                                     metadata_entry = e, 
                                     mimetype = "text/plain", 
                                     filename = "readme.txt", 
@@ -359,14 +359,14 @@ class TestConnection(TestController):
                                     col_iri = conn.sd.workspaces[0][1][0].href, 
                                     in_progress=True)
         assert deposit_receipt.edit != None
-        dr = conn.delete_resource(resource_iri = deposit_receipt.edit)
+        dr = conn.delete(resource_iri = deposit_receipt.edit)
         assert dr.code == 204 or dr.code == 200
         
         
     def test_23_Finish_in_progress_deposit(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
-        deposit_receipt = conn.create_resource(payload = "Multipart_POST_then_update_on_EM_IRI", 
+        deposit_receipt = conn.create(payload = "Multipart_POST_then_update_on_EM_IRI", 
                                     metadata_entry = e, 
                                     mimetype = "text/plain", 
                                     filename = "readme.txt", 
@@ -381,7 +381,7 @@ class TestConnection(TestController):
     def test_24_get_sword_statement(self):
         conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
-        deposit_receipt = conn.create_resource(payload = "Multipart_POST_then_update_on_EM_IRI", 
+        deposit_receipt = conn.create(payload = "Multipart_POST_then_update_on_EM_IRI", 
                                     metadata_entry = e, 
                                     mimetype = "text/plain", 
                                     filename = "readme.txt", 
