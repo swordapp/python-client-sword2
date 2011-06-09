@@ -1,0 +1,9 @@
+Testsuite
+---------
+
+functional: 
+
+    Contains tests that test only the functional methods and classes in the sword2 module. Requires no external SWORD2 server to be available
+
+http:
+    Contains tests that require the presence of SWORD2 servers. Currently, this is limited to the Simple Sword Server (sss.py) from the sword-app project.
