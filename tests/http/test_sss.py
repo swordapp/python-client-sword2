@@ -4,6 +4,16 @@ from sword2 import Connection, Entry
 from sword2.exceptions import PackagingFormatNotAvailable
 from sword2.compatible_libs import json
 
+SSS_PY_URL="http://sword-app.svn.sourceforge.net/viewvc/sword-app/sss/trunk/sss.py?revision=HEAD"
+PORT_NUMBER="8081"
+
+import subprocess, urllib, tempfile
+import os
+
+import atexit
+
+from time import sleep
+
 long_service_doc = '''<?xml version="1.0" ?>
 <service xmlns:dcterms="http://purl.org/dc/terms/"
     xmlns:sword="http://purl.org/net/sword/terms/"
@@ -59,6 +69,16 @@ long_service_doc = '''<?xml version="1.0" ?>
     </workspace>
 </service>'''
 
+
+f, sss_path = tempfile.mkstemp(suffix=".py")
+os.close(f)
+
+urllib.urlretrieve(SSS_PY_URL, sss_path)
+sss_pid = subprocess.Popen(['python', sss_path, PORT_NUMBER])
+sleep(1)
+
+atexit.register(sss_pid.kill)
+
 class TestConnection(TestController):
     def test_01_blank_init(self):
         conn = Connection("http://example.org/service-doc")
@@ -88,8 +108,8 @@ class TestConnection(TestController):
         assert conn.history[1]['type'] == "SD Parse"
         
     def test_04_init_from_sss_then_get_doc(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword")
-        assert conn.sd_iri == "http://localhost:8080/sd-uri"
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword")
+        assert conn.sd_iri == "http://localhost:%s/sd-uri" % PORT_NUMBER
         assert conn.sd == None    # Not asked to get sd doc yet
         conn.get_service_document()
         assert conn.sd != None
@@ -98,15 +118,15 @@ class TestConnection(TestController):
         assert len(conn.sd.workspaces) == 1
         
     def test_05_init_from_sss(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
-        assert conn.sd_iri == "http://localhost:8080/sd-uri"
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
+        assert conn.sd_iri == "http://localhost:%s/sd-uri" % PORT_NUMBER
         assert conn.sd != None
         assert conn.sd.parsed == True
         assert conn.sd.valid == True
         assert len(conn.sd.workspaces) == 1
    
     def test_06_Simple_POST_to_sss(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
         resp = conn.create(payload = "Payload is just a load of text", 
                                     mimetype = "text/plain", 
                                     filename = "readme.txt", 
@@ -118,7 +138,7 @@ class TestConnection(TestController):
         assert resp.code == 201
    
     def test_07_Multipart_POST_to_sss(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
         resp = conn.create(payload = "Multipart payload here", 
                                     metadata_entry = e, 
@@ -132,7 +152,8 @@ class TestConnection(TestController):
 
       
     def test_08_Simple_POST_to_sss_w_coliri(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
+        e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
         resp = conn.create(payload = "Payload is just a load of text", 
                                     mimetype = "text/plain", 
                                     filename = "readme.txt", 
@@ -143,7 +164,8 @@ class TestConnection(TestController):
         assert resp.code == 201
    
     def test_09_Multipart_POST_to_sss_w_coliri(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
+        e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
         resp = conn.create(payload = "Multipart payload here", 
                                     metadata_entry = e, 
@@ -156,7 +178,7 @@ class TestConnection(TestController):
 
 
     def test_10_Multipart_POST_then_update_on_EM_IRI(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
         deposit_receipt = conn.create(payload = "Multipart_POST_then_update_on_EM_IRI", 
                                     metadata_entry = e, 
@@ -174,7 +196,7 @@ class TestConnection(TestController):
         assert dr.code == 204       # empty response
         
     def test_11_Multipart_POST_then_update_metadata_on_Edit_IRI(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
         deposit_receipt = conn.create(payload = "Multipart_POST_then_update_on_EM_IRI", 
                                     metadata_entry = e, 
@@ -192,7 +214,7 @@ class TestConnection(TestController):
         
 
     def test_12_Metadata_POST_to_sss(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
         resp = conn.create(metadata_entry = e,
                                     workspace='Main Site', 
@@ -202,7 +224,7 @@ class TestConnection(TestController):
     
     
     def test_13_Metadata_POST_to_sss_altering_entry(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
         e.add_fields(dcterms_identifier="doi://somerubbish", dcterms_foo="blah blah")
         resp = conn.create(metadata_entry = e,
@@ -212,8 +234,7 @@ class TestConnection(TestController):
         assert resp != None
 
     def test_14_Invalid_Packaging_cached_receipt(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", 
-                          download_service_document=True, honour_receipts=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True, honour_receipts=True)
         col_iri = conn.sd.workspaces[0][1][0].href  # pick the first collection
         dr = conn.create(payload = "Payload is just a load of text", 
                                     mimetype = "text/plain", 
@@ -230,7 +251,7 @@ class TestConnection(TestController):
             pass
       
     def test_15_Metadata_POST_to_sss_w_coliri(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
         dr = conn.create(metadata_entry = e,
                                     col_iri = conn.sd.workspaces[0][1][0].href, 
@@ -238,8 +259,7 @@ class TestConnection(TestController):
         assert dr.code == 201
     
     def test_16_Invalid_Packaging_cached_receipt(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", 
-                          download_service_document=True, honour_receipts=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True, honour_receipts=True)
         col_iri = conn.sd.workspaces[0][1][0].href  # pick the first collection
         dr = conn.create(payload = "Payload is just a load of text", 
                                     mimetype = "text/plain", 
@@ -257,7 +277,7 @@ class TestConnection(TestController):
             pass
 
     def test_17_Simple_POST_and_GET(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
         col_iri = conn.sd.workspaces[0][1][0].href  # pick the first collection
         dr = conn.create(payload = "Simple_POST_and_GET", 
                                     mimetype = "text/plain", 
@@ -274,7 +294,7 @@ class TestConnection(TestController):
         
       
     def test_18_Metadata_POST_to_se_iri(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
         deposit_receipt = conn.create(payload = "Multipart_POST_then_update_on_EM_IRI", 
                                     metadata_entry = e, 
@@ -292,7 +312,7 @@ class TestConnection(TestController):
         assert dr.code == 201       
 
     def test_19_File_POST_to_se_iri(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
         deposit_receipt = conn.create(payload = "Multipart_POST_then_update_on_EM_IRI", 
                                     metadata_entry = e, 
@@ -311,7 +331,7 @@ class TestConnection(TestController):
         assert dr.code == 201
 
     def test_20_Multipart_POST_to_se_iri(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
         deposit_receipt = conn.create(payload = "Multipart_POST_then_update_on_EM_IRI", 
                                     metadata_entry = e, 
@@ -334,7 +354,7 @@ class TestConnection(TestController):
 
 
     def test_21_Create_deposit_and_delete_content(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
         deposit_receipt = conn.create(payload = "Multipart_POST_then_update_on_EM_IRI", 
                                     metadata_entry = e, 
@@ -349,7 +369,7 @@ class TestConnection(TestController):
 
 
     def test_22_Create_deposit_and_delete_deposit(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
         deposit_receipt = conn.create(payload = "Multipart_POST_then_update_on_EM_IRI", 
                                     metadata_entry = e, 
@@ -364,7 +384,7 @@ class TestConnection(TestController):
         
         
     def test_23_Finish_in_progress_deposit(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
         deposit_receipt = conn.create(payload = "Multipart_POST_then_update_on_EM_IRI", 
                                     metadata_entry = e, 
@@ -379,7 +399,7 @@ class TestConnection(TestController):
         assert dr.code == 200
         
     def test_24_get_sword_statement(self):
-        conn = Connection("http://localhost:8080/sd-uri", user_name="sword", user_pass="sword", download_service_document=True)
+        conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
         e = Entry(title="Foo", id="asidjasidj", dcterms_appendix="blah blah", dcterms_title="foo bar")
         deposit_receipt = conn.create(payload = "Multipart_POST_then_update_on_EM_IRI", 
                                     metadata_entry = e, 
