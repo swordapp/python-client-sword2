@@ -117,8 +117,39 @@ class TestConnection(TestController):
         assert receipt.dom is None or receipt.parsed == True
         assert receipt.dom is None or receipt.valid == True
 
+    def test_07_basic_create_resource_with_entry(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        e = Entry(title="An entry only deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        receipt = conn.create(col_iri = col.href,
+                    metadata_entry = e)
+                        
+        assert receipt.code == 201
+        assert receipt.location != None
+        
+        # these last two assertions are contingent on if we actually get a 
+        # receipt back from the server (which we might not legitimately get)
+        assert receipt.dom is None or receipt.parsed == True
+        assert receipt.dom is None or receipt.valid == True
 
-
+    def test_08_advanced_create_resource_with_entry(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        e = Entry(title="An entry only deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        receipt = conn.create(col_iri = col.href,
+                    metadata_entry = e,
+                    in_progress = True,
+                    suggested_identifier = "1234567890")
+                        
+        assert receipt.code == 201
+        assert receipt.location != None
+        
+        # these last two assertions are contingent on if we actually get a 
+        # receipt back from the server (which we might not legitimately get)
+        assert receipt.dom is None or receipt.parsed == True
+        assert receipt.dom is None or receipt.valid == True
 
 
 
