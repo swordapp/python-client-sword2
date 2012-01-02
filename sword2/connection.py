@@ -655,7 +655,7 @@ Loading in a locally held Service Document:
                         # related upload.
                         
                         suggested_identifier=None,
-                        in_progress=True,
+                        in_progress=False,
                         on_behalf_of=None,
                         ):
         """

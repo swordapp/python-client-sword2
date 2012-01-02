@@ -98,7 +98,9 @@ Availible attributes:
     
     `self.location`         -- The location, if given (from HTTP Header: "Location: ....")
     """
+        self.dom = None     # this will be populated below
         self.parsed = False
+        self.valid = False
         self.response_headers=response_headers
         self.location = location
         self.content = None
@@ -121,21 +123,65 @@ Availible attributes:
         self.content = {}
         self.cont_iri = None
         
+        # first construct or set the dom
         if xml_deposit_receipt:
             try:
                 self.dom = etree.fromstring(xml_deposit_receipt)
-                self.parsed = True
+                self.parsed = True    
             except Exception, e:
                 d_l.error("Was not able to parse the deposit receipt as XML.")
                 return
-            self.handle_metadata()
         elif dom != None:
             self.dom = dom
             self.parsed = True
+        
+        # allow for the possibility that we are not given a body for the deposit
+        # receipt (explicitly allowed by the spec)
+        if self.dom != None:
+            # now validate the deposit receipt
+            self.valid = self.validate()
+            d_l.info("Initial SWORD2 validation checks on deposit receipt - Valid document? %s" % self.valid)
+            
+            # finally, handle the metadata
             self.handle_metadata()
+    
+    def validate(self):
+        valid = True
+        
+        # LINK REQUIREMENTS
+        
+        # It MUST contain a Media Entry IRI (Edit-IRI), defined by atom:link@rel="edit"
+        has_edit = False
+        # It MUST contain a Media Resource IRI (EM-IRI), defined by atom:link@rel="edit-media"
+        has_em = False
+        # It MUST contain a SWORD Edit IRI (SE-IRI), defined by atom:link@rel=""" 
+        # which MAY be the same as the Edit-IRI
+        has_se = False
+        
+        links = self.dom.findall(NS['atom'] % "link")
+        for link in links:
+            rel = link.get("rel")
+            if rel == "edit":
+                has_edit = True
+            elif rel == "edit-media":
+                has_em = True
+            elif rel == "http://purl.org/net/sword/terms/add":
+                has_se = True
+        
+        if not has_edit or not has_em or not has_se:
+            valid = False
+        
+        # It MUST contain a single sword:treatment element [SWORD003] which contains either a human-readable 
+        # statement describing treatment the deposited resource has received or a IRI that dereferences to such a description.
+        treatment = self.dom.findall(NS['sword'] % "treatment")
+        if treatment == None or len(treatment) == 0:
+            valid = False
+        
+        return valid
     
     def handle_metadata(self):
         """Method that walks the `etree.SubElement`, assigning the information to the objects attributes."""
+        # FIXME: if validation fails, should we continue?
         for e in self.dom.getchildren():
             for nmsp, prefix in NS.iteritems():
                 if str(e.tag).startswith(prefix % ""):
