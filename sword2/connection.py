@@ -477,7 +477,7 @@ Loading in a locally held Service Document:
         if hasattr(payload, 'read'):
             # Need to work out why a 401 challenge will stop httplib2 from sending the file...
             # likely need to make it re-seek to 0...
-            # In the meantime, read the file into memory... *sigh*
+            # FIXME: In the meantime, read the file into memory... *sigh*
             payload = payload.read()
         
         self._t.start(request_type)
@@ -1570,6 +1570,26 @@ response_headers, etc)
                                   method="PUT",
                                   request_type='Edit_IRI PUT')
 
+
+    def get_deposit_receipt(self, edit_iri):
+        """
+Getting a copy of the Entry Document/Deposit Receipt
+
+FIXME: this explicitly requests the receipt from the server, but there is a
+cache of deposit receipts - how should we access this?
+        """
+        conn_l.debug("Trying to GET the ATOM Entry Document at %s." % edit_iri)
+        response = self.get_resource(edit_iri)
+        if response.code == 200:
+            conn_l.debug("Attempting to parse the response as a Deposit Receipt")
+            d = Deposit_Receipt(xml_deposit_receipt = response.content)
+            if d.parsed:
+                conn_l.info("Server responsed with a Deposit Receipt. Caching a copy in .resources['%s']" % d.edit)
+            d.response_headers = dict(response.response_headers)
+            d.code = 200
+            self._cache_deposit_receipt(d)
+            return d
+        return None
 
     def get_atom_sword_statement(self, sword_statement_iri):
         """

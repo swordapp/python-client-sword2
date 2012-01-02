@@ -151,6 +151,47 @@ class TestConnection(TestController):
         assert receipt.dom is None or receipt.parsed == True
         assert receipt.dom is None or receipt.valid == True
 
+    def test_09_basic_retrieve_deposit_receipt(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href, 
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip')
+        
+        # we're going to work with the location
+        assert receipt.location != None
+        
+        new_receipt = conn.get_deposit_receipt(receipt.location)
+        
+        assert new_receipt.code == 200
+        assert new_receipt.parsed == True
+        assert new_receipt.valid == True
+        
+    def test_10_advanced_retrieve_deposit_receipt(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href, 
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip',
+                        in_progress = True,
+                        suggested_identifier = "0987654321")
+        
+        # we're going to work with the location
+        assert receipt.location != None
+        
+        new_receipt = conn.get_deposit_receipt(receipt.location)
+        
+        assert new_receipt.code == 200
+        assert new_receipt.parsed == True
+        assert new_receipt.valid == True
 
 
 
