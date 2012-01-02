@@ -125,6 +125,33 @@ class ServiceDocument(object):
         else:
             valid = False
             sd_l.error("Could not find a app:workspace element in the service document.")
+            
+        # The SWORD server MUST specify the app:accept element for the app:collection element. 
+        # If the Collection can take any format content type, it should specify */* as its 
+        # value [AtomPub]. It MUST also specify an app:accept element with an alternate attribute 
+        # set to multipart-related as required by [AtomMultipart]. The formats specified by 
+        # app:accept and app:accept@alternate="multipart-related" are RECOMMENDED to be the same.
+        if test_workspace is not None:
+            cols = test_workspace.findall(NS['app'] % "collection")
+            for col in cols:
+                # the collection may contain a sub-service document, which means it is not
+                # beholden to the rules above
+                service = col.find(NS['sword'] % "service")
+                if service is not None:
+                    continue
+                
+                # since we have no sub-service document, we must validate
+                accept_valid = False
+                multipart_accept_valid = False
+                accepts = col.findall(NS['app'] % "accept")
+                for accept in accepts:
+                    multipart = accept.get("alternate")
+                    if not multipart_accept_valid:
+                        multipart_accept_valid = multipart is not None and multipart == "multipart-related"
+                    if not accept_valid:
+                        accept_valid = multipart is None
+                if not multipart_accept_valid or not accept_valid:
+                    valid = False
         
         return valid
 
