@@ -634,6 +634,7 @@ Loading in a locally held Service Document:
                 d.response_headers = dict(resp)
                 d.location = location
                 d.content = content
+                d.code = 200
                 return d
         else:
             return self._handle_error_response(resp, content)
