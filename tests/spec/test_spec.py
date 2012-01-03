@@ -1,5 +1,5 @@
 from . import TestController
-from sword2 import Connection, Entry
+from sword2 import Connection, Entry, Error_Document
 
 PACKAGE = "tests/spec/example.zip"
 PACKAGE_MIME = "application/zip"
@@ -193,8 +193,94 @@ class TestConnection(TestController):
         assert new_receipt.parsed == True
         assert new_receipt.valid == True
 
-
-
+    def test_11_basic_retrieve_content_cont_iri(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href, 
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging='http://purl.org/net/sword/package/SimpleZip')
+        # ensure that we have a receipt (the server may not give us one
+        # by default)
+        receipt = conn.get_deposit_receipt(receipt.location)
+        
+        # we're going to work with the cont_iri
+        assert receipt.cont_iri is not None
+        
+        resource = conn.get_resource(content_iri=receipt.cont_iri)
+        
+        assert resource.code == 200
+        assert resource.content is not None
+        
+    def test_12_basic_retrieve_content_em_iri(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href, 
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging='http://purl.org/net/sword/package/SimpleZip')
+        # ensure that we have a receipt (the server may not give us one
+        # by default)
+        receipt = conn.get_deposit_receipt(receipt.location)
+        
+        # we're going to work with the cont_iri
+        assert receipt.edit_media is not None
+        
+        resource = conn.get_resource(content_iri=receipt.edit_media)
+        
+        assert resource.code == 200
+        assert resource.content is not None
+        
+    def test_13_advanced_retrieve_content_em_iri(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href, 
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging='http://purl.org/net/sword/package/SimpleZip')
+        # ensure that we have a receipt (the server may not give us one
+        # by default)
+        receipt = conn.get_deposit_receipt(receipt.location)
+        
+        packaging = 'http://purl.org/net/sword/package/SimpleZip'
+        if receipt.packaging is not None and len(receipt.packaging) > 0:
+            packaging = receipt.packaging[0]
+        
+        resource = conn.get_resource(content_iri=receipt.edit_media, packaging=packaging, on_behalf_of=SSS_OBO)
+        
+        assert resource.code == 200
+        assert resource.content is not None
+   
+    def test_14_error_retrieve_content_em_iri(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW,
+                            error_response_raises_exceptions=False)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href, 
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging='http://purl.org/net/sword/package/SimpleZip')
+        # ensure that we have a receipt (the server may not give us one
+        # by default)
+        receipt = conn.get_deposit_receipt(receipt.location)
+        
+        error = 'http://purl.org/net/sword/package/IJustMadeThisUp'
+        response = conn.get_resource(content_iri=receipt.edit_media, packaging=error)
+        
+        assert response.code == 406
+        assert isinstance(response, Error_Document)
+        
 
 
 

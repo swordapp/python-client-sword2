@@ -278,19 +278,19 @@ Loading in a locally held Service Document:
         """
         if resp['status'] == "401":
             conn_l.error("You are unauthorised (401) to access this document on the server. Check your username/password credentials and your 'On Behalf Of'")
-            self._return_error_or_exception(NotAuthorised, resp, content)
+            return self._return_error_or_exception(NotAuthorised, resp, content)
         elif resp['status'] == "403":
             conn_l.error("You are Forbidden (401) to POST to '%s'. Check your username/password credentials and your 'On Behalf Of'")
-            self._return_error_or_exception(Forbidden, resp, content)
+            return self._return_error_or_exception(Forbidden, resp, content)
         elif resp['status'] == "408":
             conn_l.error("Request Timeout (408) - error uploading.")
-            self._return_error_or_exception(RequestTimeOut, resp, content)
+            return self._return_error_or_exception(RequestTimeOut, resp, content)
         elif int(resp['status']) > 499:
             conn_l.error("Server error occured. Response headers from the server:\n%s" % resp)
-            self._return_error_or_exception(ServerError, resp, content)
+            return self._return_error_or_exception(ServerError, resp, content)
         else:
             conn_l.error("Unknown error occured. Response headers from the server:\n%s" % resp)
-            self._return_error_or_exception(HTTPResponseError, resp, content)
+            return self._return_error_or_exception(HTTPResponseError, resp, content)
     
     def _cache_deposit_receipt(self, d):
         """Method for storing the deposit receipts, and also for providing lookup dictionaries that
@@ -1577,9 +1577,13 @@ Getting a copy of the Entry Document/Deposit Receipt
 
 FIXME: this explicitly requests the receipt from the server, but there is a
 cache of deposit receipts - how should we access this?
+
+FIXME: there's also something funny going on with get_resource remembering
+old headers, but not quite sure where that's coming from.  Have to pass in
+packaging and headers explicitly to overcome
         """
         conn_l.debug("Trying to GET the ATOM Entry Document at %s." % edit_iri)
-        response = self.get_resource(edit_iri)
+        response = self.get_resource(edit_iri, packaging=None, headers={})
         if response.code == 200:
             conn_l.debug("Attempting to parse the response as a Deposit Receipt")
             d = Deposit_Receipt(xml_deposit_receipt = response.content)
@@ -1673,7 +1677,7 @@ Response:
                     conn_l.error("Desired packaging format '%' not available from the server, according to the deposit receipt. Change the client parameter 'honour_receipts' to False to avoid this check.")
                     return self._return_error_or_exception(PackagingFormatNotAvailable, {}, "")
         if on_behalf_of:
-            headers['On-Behalf-Of'] = self.on_behalf_of
+            headers['On-Behalf-Of'] = on_behalf_of
         elif self.on_behalf_of:
             headers['On-Behalf-Of'] = self.on_behalf_of
         if packaging:
@@ -1684,6 +1688,7 @@ Response:
             conn_l.info("IRI GET resource '%s' with Accept-Packaging:%s" % (content_iri, packaging))
         else:
             conn_l.info("IRI GET resource '%s'" % content_iri)
+        conn_l.info("Using headers: " + str(headers))
         resp, content = self.h.request(content_iri, "GET", headers=headers)
         _, took_time = self._t.time_since_start("IRI GET resource")
         if self.history:
