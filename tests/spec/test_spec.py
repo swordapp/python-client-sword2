@@ -495,10 +495,88 @@ class TestConnection(TestController):
         assert new_receipt.code == 204
         assert new_receipt.dom is None
         
+    def test_23_basic_add_content_to_resource_single_file(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href, 
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip')
+        receipt = conn.get_deposit_receipt(receipt.location)
         
+        with open(PACKAGE) as pkg:
+            new_receipt = conn.add_file_to_resource(receipt.edit_media, pkg, "addition.zip", mimetype=PACKAGE_MIME)
+        
+        assert new_receipt.code >= 200 and new_receipt.code < 400
+        assert new_receipt.location is not None
+        assert new_receipt.location != receipt.edit_media
 
+    def test_24_advanced_add_content_to_resource_single_file(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href, 
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip')
+        receipt = conn.get_deposit_receipt(receipt.location)
+        
+        with open(PACKAGE) as pkg:
+            new_receipt = conn.add_file_to_resource(receipt.edit_media, pkg, "addition.zip", 
+                                                    mimetype=PACKAGE_MIME,
+                                                    metadata_relevant=True)
+        
+        assert new_receipt.code >= 200 and new_receipt.code < 400
+        assert new_receipt.location is not None
+        assert new_receipt.location != receipt.edit_media
 
+    def test_25_basic_add_content_to_resource_package(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href, 
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip')
+        receipt = conn.get_deposit_receipt(receipt.location)
+        
+        with open(PACKAGE) as pkg:
+            new_receipt = conn.add_file_to_resource(receipt.edit_media, pkg, "addition.zip", 
+                                                    mimetype=PACKAGE_MIME,
+                                                    packaging="http://purl.org/net/sword/package/SimpleZip")
+        
+        assert new_receipt.code >= 200 and new_receipt.code < 400
+        assert new_receipt.location is not None
+        assert new_receipt.location == receipt.edit_media
 
+    def test_26_advanced_add_content_to_resource_package(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href, 
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip')
+        receipt = conn.get_deposit_receipt(receipt.location)
+        
+        with open(PACKAGE) as pkg:
+            new_receipt = conn.add_file_to_resource(receipt.edit_media, pkg, "addition.zip", 
+                                                    mimetype=PACKAGE_MIME,
+                                                    packaging="http://purl.org/net/sword/package/SimpleZip",
+                                                    metadata_relevant=True)
+        
+        assert new_receipt.code >= 200 and new_receipt.code < 400
+        assert new_receipt.location is not None
+        assert new_receipt.location == receipt.edit_media
 
 
 

@@ -461,7 +461,7 @@ Loading in a locally held Service Document:
         headers = {}
         headers['In-Progress'] = str(in_progress).lower()
         if on_behalf_of:
-            headers['On-Behalf-Of'] = self.on_behalf_of
+            headers['On-Behalf-Of'] = on_behalf_of
         elif self.on_behalf_of:
             headers['On-Behalf-Of'] = self.on_behalf_of
             
@@ -525,6 +525,9 @@ Loading in a locally held Service Document:
             
         elif metadata_entry and filename and payload:
             # Multipart resource creation
+            my_headers = {"Content-MD5" : str(md5sum)}
+            if packaging is not None:
+                my_headers['Packaging'] = str(packaging)
             multicontent_type, payload_data = create_multipart_related([{'key':'atom',
                                                                     'type':'application/atom+xml; charset="utf-8"',
                                                                     'data':str(metadata_entry),  # etree default is utf-8
@@ -533,9 +536,7 @@ Loading in a locally held Service Document:
                                                                     'type':str(mimetype),
                                                                     'filename':filename,
                                                                     'data':payload,  
-                                                                    'headers':{'Content-MD5':str(md5sum),
-                                                                               'Packaging':str(packaging),
-                                                                               }
+                                                                    'headers':my_headers
                                                                     }
                                                                    ])
                                                                    
@@ -566,7 +567,8 @@ Loading in a locally held Service Document:
             headers['Content-MD5'] = str(md5sum)
             headers['Content-Length'] = str(f_size)
             headers['Content-Disposition'] = "attachment; filename=%s" % filename   # TODO: ensure filename is ASCII
-            headers['Packaging'] = str(packaging)
+            if packaging is not None:
+                headers['Packaging'] = str(packaging)
             
             resp, content = self.h.request(target_iri, method, headers=headers, body = payload)
             _, took_time = self._t.time_since_start(request_type)
@@ -944,6 +946,7 @@ response_headers, etc)
                         filename,      # According to spec, "The client MUST supply a Content-Disposition header with a filename parameter 
                                        #                     (note that this requires the filename be expressed in ASCII)."  
                         mimetype=None,
+                        packaging=None,
                         
                         
                         on_behalf_of=None,
@@ -991,6 +994,7 @@ response_headers, etc)
         return self._make_request(target_iri = edit_media_iri,
                                   payload=payload,
                                   mimetype=mimetype,
+                                  packaging=packaging,
                                   filename=filename,
                                   on_behalf_of=on_behalf_of,
                                   in_progress=in_progress,
@@ -1161,7 +1165,8 @@ Can be given the optional parameter of `on_behalf_of`.
         return self._make_request(target_iri = resource_iri,
                                   on_behalf_of=on_behalf_of,
                                   method="DELETE",
-                                  request_type='IRI DELETE')
+                                  request_type='IRI DELETE',
+                                  in_progress=False)
 
     def delete_content_of_resource(self, edit_media_iri = None,
                                          on_behalf_of = None,
