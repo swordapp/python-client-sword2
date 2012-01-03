@@ -1,5 +1,6 @@
 from . import TestController
 from sword2 import Connection, Entry, Error_Document
+from sword2.compatible_libs import etree
 
 PACKAGE = "tests/spec/example.zip"
 PACKAGE_MIME = "application/zip"
@@ -229,14 +230,14 @@ class TestConnection(TestController):
         # by default)
         receipt = conn.get_deposit_receipt(receipt.location)
         
-        # we're going to work with the cont_iri
+        # we're going to work with the edit_media iri
         assert receipt.edit_media is not None
         
         resource = conn.get_resource(content_iri=receipt.edit_media)
         
         assert resource.code == 200
         assert resource.content is not None
-        
+ 
     def test_13_advanced_retrieve_content_em_iri(self):
         conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
         conn.get_service_document()
@@ -281,6 +282,31 @@ class TestConnection(TestController):
         assert response.code == 406
         assert isinstance(response, Error_Document)
         
+    def test_15_retrieve_content_em_iri_as_feed(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href, 
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging='http://purl.org/net/sword/package/SimpleZip')
+        # ensure that we have a receipt (the server may not give us one
+        # by default)
+        receipt = conn.get_deposit_receipt(receipt.location)
+        
+        # we're going to work with the edit_media_feed iri
+        assert receipt.edit_media_feed is not None
+        
+        response = conn.get_resource(content_iri=receipt.edit_media_feed)
+        
+        assert response.code == 200
+        assert response.content is not None
+        
+        # the response should be an xml document, so let's see if we can parse
+        # it.  This should give us an exception which will fail the test if not
+        dom = etree.fromstring(response.content)
 
 
 
