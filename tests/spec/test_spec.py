@@ -308,10 +308,169 @@ class TestConnection(TestController):
         # it.  This should give us an exception which will fail the test if not
         dom = etree.fromstring(response.content)
 
+    def test_16_basic_replace_file_content(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href, 
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging='http://purl.org/net/sword/package/SimpleZip')
+        # ensure that we have a receipt (the server may not give us one
+        # by default)
+        receipt = conn.get_deposit_receipt(receipt.location)
+        
+        # now do the replace
+        with open(PACKAGE) as pkg:
+            new_receipt = conn.update(dr = receipt,
+                            payload=pkg,
+                            mimetype=PACKAGE_MIME,
+                            filename="update.zip",
+                            packaging='http://purl.org/net/sword/package/SimpleZip')
+        
+        assert new_receipt.code == 204
+        assert new_receipt.dom is None
+        
+    def test_17_advanced_replace_file_content(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href, 
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging='http://purl.org/net/sword/package/SimpleZip')
+        # ensure that we have a receipt (the server may not give us one
+        # by default)
+        receipt = conn.get_deposit_receipt(receipt.location)
+        
+        # now do the replace
+        with open(PACKAGE) as pkg:
+            new_receipt = conn.update(dr = receipt,
+                            payload=pkg,
+                            mimetype=PACKAGE_MIME,
+                            filename="update.zip",
+                            packaging='http://purl.org/net/sword/package/SimpleZip',
+                            metadata_relevant=True)
+        
+        assert new_receipt.code == 204
+        assert new_receipt.dom is None
 
+    def test_18_basic_replace_metadata(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        e = Entry(title="An entry only deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        receipt = conn.create(col_iri = col.href, metadata_entry = e)
+        
+        # ensure that we have a receipt (the server may not give us one
+        # by default)
+        receipt = conn.get_deposit_receipt(receipt.location)
+        
+        # now do the replace
+        ne = Entry(title="A metadata update", id="asidjasidj", dcterms_abstract="new abstract", dcterms_identifier="http://elsewhere/")
+        new_receipt = conn.update(dr=receipt, metadata_entry=ne)
+        
+        assert new_receipt.code == 204 or new_receipt.code == 200
+        if new_receipt.code == 204:
+            assert new_receipt.dom is None
+        if new_receipt.code == 200:
+            assert new_receipt.parsed == True
+            assert new_receipt.valid == True
 
+    def test_19_advanced_replace_metadata(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        e = Entry(title="An entry only deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        receipt = conn.create(col_iri = col.href, metadata_entry = e)
+        
+        # ensure that we have a receipt (the server may not give us one
+        # by default)
+        receipt = conn.get_deposit_receipt(receipt.location)
+        
+        # now do the replace
+        ne = Entry(title="A metadata update", id="asidjasidj", dcterms_abstract="new abstract", dcterms_identifier="http://elsewhere/")
+        new_receipt = conn.update(dr=receipt, metadata_entry=ne, in_progress=True)
+        
+        assert new_receipt.code == 204 or new_receipt.code == 200
+        if new_receipt.code == 204:
+            assert new_receipt.dom is None
+        if new_receipt.code == 200:
+            assert new_receipt.parsed == True
+            assert new_receipt.valid == True
 
-
+    def test_20_basic_replace_with_multipart(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        e = Entry(title="Multipart deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href,
+                        metadata_entry = e,
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip')
+                        
+        # ensure that we have a receipt (the server may not give us one
+        # by default)
+        receipt = conn.get_deposit_receipt(receipt.location)
+        
+        # now do the replace
+        ne = Entry(title="A multipart update", id="asidjasidj", dcterms_abstract="new abstract", dcterms_identifier="http://elsewhere/")
+        with open(PACKAGE) as pkg:
+            new_receipt = conn.update(dr = receipt,
+                            metadata_entry = ne,
+                            payload=pkg,
+                            mimetype=PACKAGE_MIME,
+                            filename="update.zip",
+                            packaging='http://purl.org/net/sword/package/SimpleZip')
+        
+        assert new_receipt.code == 204 or new_receipt.code == 200
+        if new_receipt.code == 204:
+            assert new_receipt.dom is None
+        if new_receipt.code == 200:
+            assert new_receipt.parsed == True
+            assert new_receipt.valid == True
+            
+    def test_21_advanced_replace_with_multipart(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        e = Entry(title="Multipart deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href,
+                        metadata_entry = e,
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip')
+                        
+        # ensure that we have a receipt (the server may not give us one
+        # by default)
+        receipt = conn.get_deposit_receipt(receipt.location)
+        
+        # now do the replace
+        ne = Entry(title="A multipart update", id="asidjasidj", dcterms_abstract="new abstract", dcterms_identifier="http://elsewhere/")
+        with open(PACKAGE) as pkg:
+            new_receipt = conn.update(dr = receipt,
+                            metadata_entry = ne,
+                            payload=pkg,
+                            mimetype=PACKAGE_MIME,
+                            filename="update.zip",
+                            packaging='http://purl.org/net/sword/package/SimpleZip',
+                            in_progress=True)
+        
+        assert new_receipt.code == 204 or new_receipt.code == 200
+        if new_receipt.code == 204:
+            assert new_receipt.dom is None
+        if new_receipt.code == 200:
+            assert new_receipt.parsed == True
+            assert new_receipt.valid == True
 
 
 

@@ -893,6 +893,7 @@ response_headers, etc)
         target_iri = None
         request_type = "Update PUT"
         if metadata_entry != None:
+            metadata_relevant = True    # set this definitively, although the server shouldn't actually care
             # Metadata or Metadata + file --> Edit-IRI
             conn_l.info("Using the Edit-IRI - Metadata or Metadata + file multipart-related uses a PUT request to the Edit-IRI")
             if payload != None and filename != None:
