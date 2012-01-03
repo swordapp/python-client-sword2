@@ -624,7 +624,65 @@ class TestConnection(TestController):
         
         assert new_receipt.code == 200
 
+    def test_29_basic_add_multipart(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        e = Entry(title="Multipart deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href,
+                        metadata_entry = e,
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip')
+        
+        # ensure that we have a receipt (the server may not give us one
+        # by default)
+        receipt = conn.get_deposit_receipt(receipt.location)
+        
+        ne = Entry(title="Multipart deposit", id="asidjasidj", dcterms_identifier="http://another/",
+                    dcterms_creator="Me!", dcterms_rights="CC0")
+        with open(PACKAGE) as pkg:
+            new_receipt = conn.append(dr=receipt,
+                                        metadata_entry=ne,
+                                        payload=pkg, 
+                                        filename="addition.zip", 
+                                        mimetype=PACKAGE_MIME,
+                                        packaging="http://purl.org/net/sword/package/SimpleZip")
+            
+        assert new_receipt.code >= 200 and new_receipt.code < 400
 
+    def test_30_advanced_add_multipart(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        e = Entry(title="Multipart deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href,
+                        metadata_entry = e,
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip')
+        
+        # ensure that we have a receipt (the server may not give us one
+        # by default)
+        receipt = conn.get_deposit_receipt(receipt.location)
+        
+        ne = Entry(title="Multipart deposit", id="asidjasidj", dcterms_identifier="http://another/",
+                    dcterms_creator="Me!", dcterms_rights="CC0")
+        with open(PACKAGE) as pkg:
+            new_receipt = conn.append(dr=receipt,
+                                        metadata_entry=ne,
+                                        payload=pkg, 
+                                        filename="addition.zip", 
+                                        mimetype=PACKAGE_MIME,
+                                        packaging="http://purl.org/net/sword/package/SimpleZip",
+                                        in_progress=True,
+                                        metadata_relevant=True)
+            
+        assert new_receipt.code >= 200 and new_receipt.code < 400
 
 
 
