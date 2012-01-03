@@ -472,6 +472,30 @@ class TestConnection(TestController):
             assert new_receipt.parsed == True
             assert new_receipt.valid == True
 
+    def test_22_delete_content(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        e = Entry(title="Multipart deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href,
+                        metadata_entry = e,
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip')
+        
+        # ensure that we have a receipt (the server may not give us one
+        # by default)
+        receipt = conn.get_deposit_receipt(receipt.location)
+        
+        # now delete the content but not the container
+        new_receipt = conn.delete_content_of_resource(dr=receipt)
+        
+        assert new_receipt.code == 204
+        assert new_receipt.dom is None
+        
+        
 
 
 

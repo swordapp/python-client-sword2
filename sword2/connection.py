@@ -1202,7 +1202,7 @@ and the correct IRI will automatically be chosen.
         else:
             conn_l.info("Deleting Resource via Edit-Media-IRI %s" % edit_media_iri)
 
-        return self.delete_resource(edit_media_iri,
+        return self.delete(edit_media_iri,
                                     on_behalf_of = on_behalf_of)
 
 
@@ -1249,7 +1249,7 @@ and the correct IRI will automatically be chosen.
         else:
             conn_l.info("Deleting Container via Edit-IRI %s" % edit_iri)
 
-        return self.delete_resource(edit_iri,
+        return self.delete(edit_iri,
                                     on_behalf_of = on_behalf_of)
             
     def complete_deposit(self,
