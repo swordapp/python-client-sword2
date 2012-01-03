@@ -1600,7 +1600,10 @@ packaging and headers explicitly to overcome
             d.code = 200
             self._cache_deposit_receipt(d)
             return d
-        return None
+        elif response.code == 404:
+            d = Deposit_Receipt()
+            d.code = 404
+            return d
 
     def get_atom_sword_statement(self, sword_statement_iri):
         """
@@ -1660,7 +1663,6 @@ Response:
         `ContentWrapper.code`    -- status code ('200' on success.)
 
         """
-                
         if not content_iri:
             if dr != None:
                 conn_l.info("Using the deposit receipt to get the SWORD2-Edit-IRI")
@@ -1695,7 +1697,7 @@ Response:
             conn_l.info("IRI GET resource '%s' with Accept-Packaging:%s" % (content_iri, packaging))
         else:
             conn_l.info("IRI GET resource '%s'" % content_iri)
-        conn_l.info("Using headers: " + str(headers))
+        conn_l.debug("Using headers: " + str(headers))
         resp, content = self.h.request(content_iri, "GET", headers=headers)
         _, took_time = self._t.time_since_start("IRI GET resource")
         if self.history:
