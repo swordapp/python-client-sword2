@@ -389,6 +389,7 @@ Loading in a locally held Service Document:
                       mimetype=None,      
                       filename=None,
                       packaging=None,
+                      md5sum=None,
                         
                       metadata_entry=None,  # a sword2.Entry needs to be here, if 
                                               # a metadata entry is to be uploaded
@@ -455,7 +456,12 @@ Loading in a locally held Service Document:
         response_headers, etc)
         """
         if payload:
-            md5sum, f_size = get_md5(payload)
+            md5, f_size = get_md5(payload)
+            # this allows the user to pass in their own md5sum (this doesn't save
+            # any time, though, because of the above operation - useful mainly for
+            # testing at this stage
+            if md5sum is None:
+                md5sum = md5
         
         # request-level headers
         headers = {}
@@ -468,9 +474,6 @@ Loading in a locally held Service Document:
         if suggested_identifier:
             headers['Slug'] = str(suggested_identifier)
             
-        if suggested_identifier:
-            headers['Slug'] = str(suggested_identifier)
-        
         if metadata_relevant:
             headers['Metadata-Relevant'] = str(metadata_relevant).lower()
         
@@ -650,6 +653,7 @@ Loading in a locally held Service Document:
                         mimetype=None,      
                         filename=None,
                         packaging=None,
+                        md5sum=None,               # optional; will be calculated for you otherwise
                         
                         metadata_entry=None,  # a sword2.Entry needs to be here, if 
                                               # a metadata entry is to be uploaded
@@ -812,13 +816,15 @@ The SWORD server is not required to support packaging formats, but this profile 
                                   in_progress=in_progress,
                                   on_behalf_of=on_behalf_of,
                                   method="POST",
-                                  request_type='Col_IRI POST')
+                                  request_type='Col_IRI POST',
+                                  md5sum=md5sum)
         
     def update(self, metadata_entry = None,    # required for a metadata update
                              payload = None,            # required for a file update      
                              filename = None,           # required for a file update
                              mimetype=None,             # required for a file update
                              packaging=None,            # required for a file update
+                             md5sum=None,               # optional; will be calculated for you otherwise
                              
                              dr = None,     # Important! Without this, you will have to set the edit_iri AND the edit_media_iri parameters.
                              
@@ -937,7 +943,8 @@ response_headers, etc)
                                   in_progress=in_progress,
                                   metadata_relevant=str(metadata_relevant),
                                   method="PUT",
-                                  request_type=request_type)
+                                  request_type=request_type,
+                                  md5sum=md5sum)
 
 
         
@@ -948,7 +955,7 @@ response_headers, etc)
                                        #                     (note that this requires the filename be expressed in ASCII)."  
                         mimetype=None,
                         packaging=None,
-                        
+                        md5sum=None,               # optional; will be calculated for you otherwise
                         
                         on_behalf_of=None,
                         in_progress=False, 
@@ -1001,7 +1008,8 @@ response_headers, etc)
                                   in_progress=in_progress,
                                   method="POST",
                                   metadata_relevant=metadata_relevant,
-                                  request_type='EM_IRI POST (APPEND)')
+                                  request_type='EM_IRI POST (APPEND)',
+                                  md5sum=md5sum)
 
     def append(self, 
                         se_iri = None,  
@@ -1011,6 +1019,8 @@ response_headers, etc)
                                             #                     (note that this requires the filename be expressed in ASCII)."
                         mimetype = None,
                         packaging = None,
+                        md5sum=None,               # optional; will be calculated for you otherwise
+                        
                         on_behalf_of = None,
                         metadata_entry = None,
                         metadata_relevant = False,
@@ -1149,7 +1159,8 @@ response_headers, etc)
                                   in_progress=in_progress, 
                                   method="POST",
                                   metadata_relevant=metadata_relevant,
-                                  request_type='SE_IRI POST (APPEND PKG)')
+                                  request_type='SE_IRI POST (APPEND PKG)',
+                                  md5sum=md5sum)
 
 
     def delete(self,
@@ -1312,6 +1323,7 @@ and the correct IRI will automatically be chosen.
                                        #                     (note that this requires the filename be expressed in ASCII)."
                         mimetype=None,
                         packaging=None,
+                        md5sum=None,               # optional; will be calculated for you otherwise
                         
                         edit_media_iri = None,
                         
@@ -1392,7 +1404,8 @@ response_headers, etc)
                                   on_behalf_of=on_behalf_of,
                                   method="PUT",
                                   metadata_relevant=str(metadata_relevant),
-                                  request_type='EM_IRI PUT')
+                                  request_type='EM_IRI PUT',
+                                  md5sum=md5sum)
 
     def update_metadata_for_resource(self, metadata_entry,    # required
                                            edit_iri = None,
@@ -1483,6 +1496,7 @@ response_headers, etc)
                                                                     #                     (note that this requires the filename be expressed in ASCII)."
                                                      mimetype=None,
                                                      packaging=None,
+                                                     md5sum=None,               # optional; will be calculated for you otherwise
                                                      
                                                      edit_iri = None,
                         
@@ -1575,7 +1589,8 @@ response_headers, etc)
                                   in_progress=in_progress,
                                   metadata_relevant=str(metadata_relevant),
                                   method="PUT",
-                                  request_type='Edit_IRI PUT')
+                                  request_type='Edit_IRI PUT',
+                                  md5sum=md5sum)
 
 
     def get_deposit_receipt(self, edit_iri):

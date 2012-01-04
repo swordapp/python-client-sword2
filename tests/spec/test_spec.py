@@ -9,6 +9,9 @@ SSS_UN = "sword"
 SSS_PW = "sword"
 SSS_OBO = "obo"
 
+# Note, there are tests in here which use On-Behalf-Of, so those tests will
+# fail if the server does not support mediation.
+
 class TestConnection(TestController):
     def test_01_get_service_document(self):
         conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
@@ -281,6 +284,7 @@ class TestConnection(TestController):
         
         assert response.code == 406
         assert isinstance(response, Error_Document)
+        assert response.error_href == "http://purl.org/net/sword/error/ErrorContent"
         
     def test_15_retrieve_content_em_iri_as_feed(self):
         conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
@@ -795,8 +799,73 @@ class TestConnection(TestController):
         
         assert response.code == 200
         
+    def test_35_error_checksum_mismatch(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW,
+                            error_response_raises_exceptions=False)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href,
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip',
+                        in_progress = True,
+                        suggested_identifier = "zyxwvutsrq",
+                        md5sum="123456789")
+                        
+        assert receipt.code == 412
+        assert isinstance(receipt, Error_Document)
+        assert receipt.error_href == "http://purl.org/net/sword/error/ErrorChecksumMismatch"
         
+    def test_36_error_bad_request(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW,
+                            error_response_raises_exceptions=False)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href,
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip',
+                        in_progress = "Invalid",    # the API seems to allow this!
+                        suggested_identifier = "zyxwvutsrq")
+                        
+        assert receipt.code == 400
+        assert isinstance(receipt, Error_Document)
+        assert receipt.error_href == "http://purl.org/net/sword/error/ErrorBadRequest"
+        
+    def test_37_error_target_owner_unknown(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW,
+                            error_response_raises_exceptions=False)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href,
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip',
+                        in_progress = True,
+                        suggested_identifier = "zyxwvutsrq",
+                        on_behalf_of="richard") # we expressly set the wrong obo on the request rather than the connection
+                        
+        assert receipt.code == 403
+        assert isinstance(receipt, Error_Document)
+        assert receipt.error_href == "http://purl.org/net/sword/error/TargetOwnerUnknown"
+        
+    def test_38_error_mediation_not_allowed(self):
+        # this is a placeholder; it's not possible to reliably test for this
+        pass
+        
+    def test_39_error_method_not_allowed(self):
+        # this is a placeholder; it's not possible to reliably test for this
+        pass
 
+    def test_40_error_max_upload_size_exceeded(self):
+        # this is a placeholder; it's not possible to reliably test for this
+        pass
 
 
 
