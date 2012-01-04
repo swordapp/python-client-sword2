@@ -771,7 +771,31 @@ class TestConnection(TestController):
         
         assert isinstance(statement, Ore_Sword_Statement)
 
-
+    def test_34_complete_deposit(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        e = Entry(title="Foo", id="asidjasidj", dcterms_abstract="abstract", dcterms_title="my title")
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href,
+                        metadata_entry = e,
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip',
+                        in_progress = True,
+                        suggested_identifier = "zyxwvutsrq")
+                        
+        # ensure that we have a receipt (the server may not give us one
+        # by default)
+        edit_iri = receipt.location
+        receipt = conn.get_deposit_receipt(edit_iri)
+        
+        response = conn.complete_deposit(dr=receipt)
+        
+        assert response.code == 200
+        
+        
 
 
 
