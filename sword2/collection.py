@@ -23,8 +23,6 @@ from utils import NS, get_text
 
 from deposit_receipt import Deposit_Receipt
 
-from atom_objects import Category
-
 from datetime import datetime
 
 
@@ -252,42 +250,5 @@ class Collection_Feed(object):
         self._cached = []
         self.h = http_client
         
-class Sword_Statement(object):
-    """Beginning SWORD2 Sword Statement support.
-    
-    The aim is for the sword statements to be available through attributes on this object.
-    
-    In the meantime, please use the low-level `self.feed` for access to an etree.Element containing the
-    parsed form of the `xml_document` it is passed.
-    
-    NB if `self.parsed` is not `True`, then there has been a problem parsing the xml document so check the original text,
-    cached in `self.xml_document`
-    """
-    def __init__(self, xml_document):
-        self.xml_document = xml_document
-        self.parsed = False
-        self.first = None
-        self.next = None
-        self.previous = None
-        self.last = None
-        self.categories = []
-        self.entries = []
-        try:
-            coll_l.info("Attempting to parse the Feed XML document")
-            self.feed = etree.fromstring(xml_document)
-            self.parsed = True
-        except Exception, e:
-            coll_l.error("Failed to parse document - %s" % e)
-            coll_l.error("XML document begins:\n %s" % xml_document[:300])
-        self.enumerate_feed()
-
-    def enumerate_feed(self):
-        # Handle Categories
-        for cate in self.feed.findall(NS['atom'] % 'category'):
-            self.categories.append(Category(dom = cate))
-        # handle entries - each one is compatible with a Deposit receipt, so using that
-        for entry in self.feed.findall(NS['atom'] % 'entry'):
-            self.entries.append(Deposit_Receipt(dom=entry))
-        # TODO handle multipage first/last pagination
             
 

@@ -25,6 +25,8 @@ NS['dcterms'] = "{http://purl.org/dc/terms/}%s"
 NS['sword'] ="{http://purl.org/net/sword/terms/}%s"
 NS['atom'] = "{http://www.w3.org/2005/Atom}%s"
 NS['app'] = "{http://www.w3.org/2007/app}%s"
+NS['rdf'] = "{http://www.w3.org/1999/02/22-rdf-syntax-ns#}%s"
+NS['ore'] = "{http://www.openarchives.org/ore/terms/}%s"
 
 def get_text(parent, tag, plural = False):
     """Takes an `etree.Element` and a tag name to search for and retrieves the text attribute from any

@@ -18,7 +18,7 @@ from transaction_history import Transaction_History
 from service_document import ServiceDocument
 from deposit_receipt import Deposit_Receipt
 from error_document import Error_Document
-from collection import Sword_Statement
+from statement import Atom_Sword_Statement, Ore_Sword_Statement
 from exceptions import *
 
 from compatible_libs import etree
@@ -1605,6 +1605,26 @@ packaging and headers explicitly to overcome
             d.code = 404
             return d
 
+    def get_ore_sword_statement(self, sword_statement_iri):
+        """
+Getting the Sword Statement.
+
+IN PROGRESS - USE AT OWN RISK.... see `sword2.Sword_Statement`.
+        """
+        # get the statement first
+        conn_l.debug("Trying to GET the ORE Sword Statement at %s." % sword_statement_iri)
+        response = self.get_resource(sword_statement_iri, headers = {'Accept':'application/rdf+xml'})
+        if response.code == 200:
+            #try:
+            if True:
+                conn_l.debug("Attempting to parse the response as a ORE Sword Statement")
+                s = Ore_Sword_Statement(response.content)
+                conn_l.debug("Parsed SWORD2 Statement, returning")
+                return s
+            #except Exception, e:
+            #    # Any error here is to do with the parsing
+            #    return response.content
+
     def get_atom_sword_statement(self, sword_statement_iri):
         """
 Getting the Sword Statement.
@@ -1618,7 +1638,7 @@ IN PROGRESS - USE AT OWN RISK.... see `sword2.Sword_Statement`.
             #try:
             if True:
                 conn_l.debug("Attempting to parse the response as a ATOM Sword Statement")
-                s = Sword_Statement(response.content)
+                s = Atom_Sword_Statement(response.content)
                 conn_l.debug("Parsed SWORD2 Statement, returning")
                 return s
             #except Exception, e:

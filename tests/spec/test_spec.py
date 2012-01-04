@@ -1,5 +1,5 @@
 from . import TestController
-from sword2 import Connection, Entry, Error_Document
+from sword2 import Connection, Entry, Error_Document, Atom_Sword_Statement, Ore_Sword_Statement
 from sword2.compatible_libs import etree
 
 PACKAGE = "tests/spec/example.zip"
@@ -720,6 +720,88 @@ class TestConnection(TestController):
         
         # FIXME: this is the broken assert
         #assert another_receipt.code == 404
+
+    def test_32_get_atom_statement(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        e = Entry(title="Multipart deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href,
+                        metadata_entry = e,
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip')
+        
+        # ensure that we have a receipt (the server may not give us one
+        # by default)
+        edit_iri = receipt.location
+        receipt = conn.get_deposit_receipt(edit_iri)
+        
+        assert receipt.atom_statement_iri is not None
+        
+        # get the statement
+        statement = conn.get_atom_sword_statement(receipt.atom_statement_iri)
+        
+        assert isinstance(statement, Atom_Sword_Statement)
+
+    def test_33_get_ore_statement(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        e = Entry(title="Multipart deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        with open(PACKAGE) as pkg:
+            receipt = conn.create(col_iri = col.href,
+                        metadata_entry = e,
+                        payload=pkg, 
+                        mimetype=PACKAGE_MIME, 
+                        filename="example.zip",
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip')
+        
+        # ensure that we have a receipt (the server may not give us one
+        # by default)
+        edit_iri = receipt.location
+        receipt = conn.get_deposit_receipt(edit_iri)
+        
+        assert receipt.ore_statement_iri is not None
+        
+        # get the statement
+        statement = conn.get_ore_sword_statement(receipt.ore_statement_iri)
+        
+        assert isinstance(statement, Ore_Sword_Statement)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

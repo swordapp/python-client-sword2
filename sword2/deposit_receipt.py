@@ -112,6 +112,8 @@ Availible attributes:
         self.edit_media_feed = None
         self.alternate = None
         self.se_iri = None 
+        self.atom_statement_iri = None
+        self.ore_statement_iri = None
         # Atom convenience attribs
         self.title = None
         self.id = None
@@ -237,6 +239,13 @@ Availible attributes:
                 self.se_iri = e.attrib.get('href', None)
             elif rel == "alternate":
                 self.alternate = e.attrib.get('href', None)
+            elif rel == "http://purl.org/net/sword/terms/statement":
+                t = e.attrib.get("type")
+                if t is not None and t == "application/atom+xml;type=feed":
+                    self.atom_statement_iri = e.attrib.get('href', None)
+                elif t is not None and t == "application/rdf+xml":
+                    self.ore_statement_iri = e.attrib.get('href', None)
+                    
             # Put all links into .links attribute, with all element attribs
             attribs = {}
             for k,v in e.attrib.iteritems():
