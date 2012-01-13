@@ -4,7 +4,7 @@ from sword2.compatible_libs import etree
 
 PACKAGE = "tests/spec/example.zip"
 PACKAGE_MIME = "application/zip"
-SSS_URL = "http://localhost:8080/sd-uri"
+SSS_URL = "http://localhost:5000/sd-uri"
 SSS_UN = "sword"
 SSS_PW = "sword"
 SSS_OBO = "obo"
@@ -13,6 +13,7 @@ SSS_OBO = "obo"
 # fail if the server does not support mediation.
 
 class TestConnection(TestController):
+    
     def test_01_get_service_document(self):
         conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
         conn.get_service_document()
@@ -76,7 +77,7 @@ class TestConnection(TestController):
         # receipt back from the server (which we might not legitimately get)
         assert receipt.dom is None or receipt.parsed == True
         assert receipt.dom is None or receipt.valid == True
-        
+    """
     def test_05_basic_create_resource_with_multipart(self):
         conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
         conn.get_service_document()
@@ -120,7 +121,8 @@ class TestConnection(TestController):
         # receipt back from the server (which we might not legitimately get)
         assert receipt.dom is None or receipt.parsed == True
         assert receipt.dom is None or receipt.valid == True
-
+    """
+    
     def test_07_basic_create_resource_with_entry(self):
         conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
         conn.get_service_document()
@@ -196,7 +198,7 @@ class TestConnection(TestController):
         assert new_receipt.code == 200
         assert new_receipt.parsed == True
         assert new_receipt.valid == True
-
+    
     def test_11_basic_retrieve_content_cont_iri(self):
         conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
         conn.get_service_document()

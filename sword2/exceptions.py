@@ -27,4 +27,6 @@ class NotFound(HTTPResponseError):
 
 class PackagingFormatNotAvailable(HTTPResponseError):
     pass
-    
+
+class NotAcceptable(HTTPResponseError):
+    pass

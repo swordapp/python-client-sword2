@@ -141,11 +141,14 @@ Availible attributes:
         # receipt (explicitly allowed by the spec)
         if self.dom != None:
             # now validate the deposit receipt
+            # Validation doesn't stop anything happening, it just lets the client
+            # user know what to expect (note that Error_Document sub classes Deposit_Receipt
+            # and that will almost always fail the validation)
             self.valid = self.validate()
             d_l.info("Initial SWORD2 validation checks on deposit receipt - Valid document? %s" % self.valid)
             
-            # finally, handle the metadata
-            self.handle_metadata()
+        # finally, handle the metadata
+        self.handle_metadata()
     
     def validate(self):
         valid = True
@@ -183,7 +186,6 @@ Availible attributes:
     
     def handle_metadata(self):
         """Method that walks the `etree.SubElement`, assigning the information to the objects attributes."""
-        # FIXME: if validation fails, should we continue?
         for e in self.dom.getchildren():
             for nmsp, prefix in NS.iteritems():
                 if str(e.tag).startswith(prefix % ""):

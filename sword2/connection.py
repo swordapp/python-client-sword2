@@ -245,7 +245,8 @@ Loading in a locally held Service Document:
         if self.raise_except:
             raise cls(resp)
         else:
-            if resp['content-type'] in ['text/xml', 'application/xml']:
+            # content type can contain both the mimetype and the charset (e.g. text/xml; charset=utf-8)
+            if resp['content-type'].startswith("text/xml") or resp['content-type'].startswith("application/xml"):
                 conn_l.info("Returning an error document, due to HTTP response code %s" % resp.status)
                 e = Error_Document(content, code=resp.status, resp = resp)
                 return e
@@ -266,6 +267,9 @@ Loading in a locally held Service Document:
         
         404 - Not Found.
             Will throw a `sword2.exceptions.NotFound` exception
+            
+        406 - Not Acceptable.
+            Will throw a `sword2.exceptions.NotAcceptable` exception
         
         408 - Request Timeout
             Will throw a `sword2.exceptions.RequestTimeOut` exception
@@ -282,6 +286,9 @@ Loading in a locally held Service Document:
         elif resp['status'] == "403":
             conn_l.error("You are Forbidden (401) to POST to '%s'. Check your username/password credentials and your 'On Behalf Of'")
             return self._return_error_or_exception(Forbidden, resp, content)
+        elif resp['status'] == "406":
+            conn_l.error("Cannot negotiate for desired format/packaging on '%s'.")
+            return self._return_error_or_exception(NotAcceptable, resp, content)
         elif resp['status'] == "408":
             conn_l.error("Request Timeout (408) - error uploading.")
             return self._return_error_or_exception(RequestTimeOut, resp, content)
@@ -1754,9 +1761,10 @@ Response:
                     self.content = content
                     self.code = resp.status
             return ContentWrapper(resp, content)
-        elif resp['status'] == '408':   # Unavailable packaging format 
-            conn_l.error("Desired packaging format '%' not available from the server.")
-            return self._return_error_or_exception(PackagingFormatNotAvailable, resp, content)
+        # NOTE: let the core error handling deal with this
+        #elif resp['status'] == '406':   # Unavailable packaging format 
+        #    conn_l.error("Desired packaging format '%' not available from the server.")
+        #    return self._return_error_or_exception(PackagingFormatNotAvailable, resp, content)
         else:
             return self._handle_error_response(resp, content)
 
