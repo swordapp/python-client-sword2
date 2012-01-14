@@ -147,8 +147,8 @@ Availible attributes:
             self.valid = self.validate()
             d_l.info("Initial SWORD2 validation checks on deposit receipt - Valid document? %s" % self.valid)
             
-        # finally, handle the metadata
-        self.handle_metadata()
+            # finally, handle the metadata
+            self.handle_metadata()
     
     def validate(self):
         valid = True
