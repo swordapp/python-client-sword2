@@ -4,7 +4,7 @@ from sword2.compatible_libs import etree
 
 PACKAGE = "tests/spec/example.zip"
 PACKAGE_MIME = "application/zip"
-SSS_URL = "http://localhost:5000/sd-uri"
+SSS_URL = "http://localhost:8080/sd-uri"
 SSS_UN = "sword"
 SSS_PW = "sword"
 SSS_OBO = "obo"
