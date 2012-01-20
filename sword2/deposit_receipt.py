@@ -174,12 +174,14 @@ Availible attributes:
                 has_se = True
         
         if not has_edit or not has_em or not has_se:
+            d_l.debug("Validation Fail: has_edit: " + str(has_edit) + "; has_em: " + str(has_em) + "; has_se: " + str(has_se))
             valid = False
         
         # It MUST contain a single sword:treatment element [SWORD003] which contains either a human-readable 
         # statement describing treatment the deposited resource has received or a IRI that dereferences to such a description.
         treatment = self.dom.findall(NS['sword'] % "treatment")
         if treatment == None or len(treatment) == 0:
+            d_l.debug("Validation Fail: no treatment or treatment invalid: " + str(treatment))
             valid = False
         
         return valid
