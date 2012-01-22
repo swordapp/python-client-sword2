@@ -168,12 +168,8 @@ class TestConnection(TestController):
         conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
         conn.get_service_document()
         col = conn.sd.workspaces[0][1][0]
-        with open(PACKAGE) as pkg:
-            receipt = conn.create(col_iri = col.href, 
-                        payload=pkg, 
-                        mimetype=PACKAGE_MIME, 
-                        filename="example.zip",
-                        packaging = 'http://purl.org/net/sword/package/SimpleZip')
+        e = Entry(title="An entry only deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        receipt = conn.create(col_iri = col.href, metadata_entry = e)
         
         # we're going to work with the location
         assert receipt.location != None
@@ -188,14 +184,11 @@ class TestConnection(TestController):
         conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
         conn.get_service_document()
         col = conn.sd.workspaces[0][1][0]
-        with open(PACKAGE) as pkg:
-            receipt = conn.create(col_iri = col.href, 
-                        payload=pkg, 
-                        mimetype=PACKAGE_MIME, 
-                        filename="example.zip",
-                        packaging = 'http://purl.org/net/sword/package/SimpleZip',
+        suggested_id = str(uuid.uuid4())
+        e = Entry(title="An entry only deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        receipt = conn.create(col_iri = col.href, metadata_entry = e, 
                         in_progress = True,
-                        suggested_identifier = str(uuid.uuid4()))
+                        suggested_identifier = suggested_id)
         
         # we're going to work with the location
         assert receipt.location != None
@@ -205,6 +198,32 @@ class TestConnection(TestController):
         assert new_receipt.code == 200
         assert new_receipt.parsed == True
         assert new_receipt.valid == True
+        
+        print new_receipt.to_xml()
+        
+        # Here are some more things we can know about the receipt
+        # 1 - the links will all contain the suggested identifier
+        # 2 - the links will all contain the name of the silo
+        # 3 - the packaging will contain DataBankBagIt
+        # 4 - the DC metadata will be reflected back at us
+        # 5 - the atom metadata will be populated in some way
+        
+        for rel, links in new_receipt.links.iteritems():
+            for link in links:
+                assert suggested_id in link['href']
+                assert col.title in link['href']
+            
+        assert "http://dataflow.ox.ac.uk/package/DataBankBagIt" in new_receipt.packaging
+        
+        # check the atom metadata
+        assert new_receipt.title == "An entry only deposit"
+        assert new_receipt.summary == "abstract"
+        
+        # check the DC metadata
+        assert "An entry only deposit" in new_receipt.metadata["dcterms_title"]
+        assert "abstract" in new_receipt.metadata["dcterms_abstract"]
+        assert "http://whatever/" in new_receipt.metadata["dcterms_identifier"]
+            
     
     """
     def test_11_basic_retrieve_content_cont_iri(self):
@@ -335,12 +354,9 @@ class TestConnection(TestController):
         conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
         conn.get_service_document()
         col = conn.sd.workspaces[0][1][0]
-        with open(PACKAGE) as pkg:
-            receipt = conn.create(col_iri = col.href, 
-                        payload=pkg, 
-                        mimetype=PACKAGE_MIME, 
-                        filename="example.zip",
-                        packaging='http://purl.org/net/sword/package/SimpleZip')
+        e = Entry(title="An entry only deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        receipt = conn.create(col_iri = col.href, metadata_entry = e)
+        
         # ensure that we have a receipt (the server may not give us one
         # by default)
         receipt = conn.get_deposit_receipt(receipt.location)
@@ -360,12 +376,9 @@ class TestConnection(TestController):
         conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
         conn.get_service_document()
         col = conn.sd.workspaces[0][1][0]
-        with open(PACKAGE) as pkg:
-            receipt = conn.create(col_iri = col.href, 
-                        payload=pkg, 
-                        mimetype=PACKAGE_MIME, 
-                        filename="example.zip",
-                        packaging='http://purl.org/net/sword/package/SimpleZip')
+        e = Entry(title="An entry only deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        receipt = conn.create(col_iri = col.href, metadata_entry = e)
+        
         # ensure that we have a receipt (the server may not give us one
         # by default)
         receipt = conn.get_deposit_receipt(receipt.location)
@@ -785,11 +798,12 @@ class TestConnection(TestController):
         e = Entry(title="An entry only deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
         receipt = conn.create(col_iri = col.href, metadata_entry = e)
         with open(PACKAGE) as pkg:
-            receipt = conn.create(col_iri = col.href, 
-                        payload=pkg, 
-                        mimetype=PACKAGE_MIME, 
-                        filename="example.zip",
-                        packaging='http://purl.org/net/sword/package/SimpleZip')
+            new_receipt = conn.update(dr = receipt,
+                            payload=pkg,
+                            mimetype=PACKAGE_MIME,
+                            filename="update.zip",
+                            packaging='http://purl.org/net/sword/package/SimpleZip')
+        
         # ensure that we have a receipt (the server may not give us one
         # by default)
         receipt = conn.get_deposit_receipt(receipt.location)

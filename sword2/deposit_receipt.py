@@ -203,7 +203,7 @@ Availible attributes:
                             if not e.text:
                                 e.text = ""
                             e.text += " %s:\"%s\"" % (ak, av)
-                        self.metadata[field] = e.text.strip()
+                        self.metadata[field] = [e.text.strip()]
                     elif field == "sword_packaging":
                         self.packaging.append(e.text)
                     else:
@@ -221,9 +221,9 @@ Availible attributes:
                             if isinstance(self.metadata[field], list):
                                 self.metadata[field].append(e.text)
                             else:
-                                self.metadata[field] = [self.metadata[field], e.text]
+                                self.metadata[field] += [e.text]
                         else:
-                            self.metadata[field] = e.text
+                            self.metadata[field] = [e.text]
                     
     def handle_link(self, e):
         """Method that handles the intepreting of <atom:link> element information and placing it into the anticipated attributes."""
