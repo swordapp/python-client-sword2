@@ -10,6 +10,9 @@ SSS_UN = "sword"
 SSS_PW = "sword"
 SSS_OBO = "obo"
 
+DC = "{http://purl.org/dc/terms/}"
+RDF = "{http://www.w3.org/1999/02/22-rdf-syntax-ns#}"
+
 class TestConnection(TestController):
     
     def test_01_get_service_document(self):
@@ -814,6 +817,54 @@ class TestConnection(TestController):
         statement = conn.get_ore_sword_statement(receipt.ore_statement_iri)
         
         assert isinstance(statement, Ore_Sword_Statement)
+        
+        # some specific things that we can assert about the Statement
+        # 1 - it should have the original deposits listed
+        # 2 - it should have the aggregated resources listed
+        # 3 - it should have the correct state
+        # 4 - the dom should contain all the relevant metadata
+        
+        # check the original deposits
+        od_uri = None
+        assert len(statement.original_deposits) == 1
+        for od in statement.original_deposits:
+            assert "update.zip" in od.uri
+            assert od.is_original_deposit
+            assert od.deposited_on is not None
+            # assert od.deposited_by == SSS_UN # FIXME: this may not work until we get auth sorted out
+            assert od.deposited_on_behalf_of is None
+            od_uri = od.uri
+        
+        # check the aggregated resources
+        assert len(statement.resources) == 1
+        for ar in statement.resources:
+            # should be the same resource
+            assert od_uri == ar.uri
+        
+        # check the states
+        assert len(statement.states) == 1
+        assert statement.states[0][0] == "http://databank.ox.ac.uk/state/PopulatedDataset"
+        
+        print etree.tostring(statement.dom, pretty_print=True)
+        
+        # check the metadata
+        md_count = 0
+        for e in statement.dom.findall(RDF + "Description"):
+            for element in e.getchildren():
+                if element.tag == DC + "title":
+                    assert element.text.strip() == "An entry only deposit"
+                    md_count += 1
+                elif element.tag == DC + "abstract":
+                    assert element.text.strip() == "abstract"
+                    md_count += 1
+                elif element.tag == DC + "identifier":
+                    resource = element.attrib.get(RDF + "resource", None)
+                    if resource is not None: # because we know that there is going to be more than one identifier
+                        assert element.attrib.get(RDF + "resource") == "http://whatever/"
+                        md_count += 1
+                
+        print "Metadata Count: " + str(md_count)
+        assert md_count == 3
 
     """
     def test_34_complete_deposit(self):
