@@ -6,8 +6,8 @@ from sword2.compatible_libs import etree
 PACKAGE = "tests/databank/example.zip"
 PACKAGE_MIME = "application/zip"
 SSS_URL = "http://localhost:5000/swordv2/service-document"
-SSS_UN = "sword"
-SSS_PW = "sword"
+SSS_UN = "admin"
+SSS_PW = "admin"
 SSS_OBO = "obo"
 
 DC = "{http://purl.org/dc/terms/}"
@@ -26,7 +26,7 @@ class TestConnection(TestController):
         assert conn.sd.parsed == True
         assert conn.sd.valid == True 
         assert len(conn.sd.workspaces) == 1
-        
+    
     """
     def test_02_get_service_document_on_behalf_of(self):
         conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
@@ -40,6 +40,11 @@ class TestConnection(TestController):
         assert conn.sd.valid == True 
         assert len(conn.sd.workspaces) == 1
     """
+    
+    def test_02_get_service_document_unauthorised(self):
+        conn = Connection(SSS_URL, user_name="alsdkfjsdz", user_pass="ZAKJKLASJDF")
+        conn.get_service_document()
+        assert conn.sd is None
     
     """
     def test_03_basic_create_resource_with_package(self):

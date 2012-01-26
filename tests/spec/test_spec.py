@@ -868,6 +868,11 @@ class TestConnection(TestController):
     def test_40_error_max_upload_size_exceeded(self):
         # this is a placeholder; it's not possible to reliably test for this
         pass
+        
+    def test_41_get_service_document_unauthorised(self):
+        conn = Connection(SSS_URL, user_name="alsdkfjsdz", user_pass="ZAKJKLASJDF")
+        conn.get_service_document()
+        assert conn.sd is None
 
 
 
