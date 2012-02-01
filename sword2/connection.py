@@ -23,7 +23,8 @@ from exceptions import *
 
 from compatible_libs import etree
 
-import httplib2
+# import httplib2
+import http_layer
 
 class Connection(object):
     """
@@ -124,7 +125,10 @@ Please see the testsuite for this class for more examples of the sorts of transa
                        keep_history=True,
                        cache_deposit_receipts=True,
                        honour_receipts=True,
-                       error_response_raises_exceptions=True):
+                       error_response_raises_exceptions=True,
+                       
+                       # http layer implementation if different from default
+                       http_impl=None):
         """
 Creates a new Connection object.
 
@@ -207,7 +211,15 @@ Loading in a locally held Service Document:
         self.raise_except = error_response_raises_exceptions
         
         self.keep_cache = cache_deposit_receipts
-        self.h = httplib2.Http(".cache", timeout=30.0)
+        
+        # set the http layer
+        if http_impl is None:
+            conn_l.info("Loading default HTTP layer")
+            self.h = http_layer.HttpLib2Layer(".cache", timeout=30.0)
+        else:
+            conn_l.info("Using provided HTTP layer")
+            self.h = http_impl
+        
         self.user_name = user_name
         self.on_behalf_of = on_behalf_of
         
@@ -1752,7 +1764,7 @@ Response:
                              headers = headers,
                              process_duration = took_time)
         conn_l.info("Server response: %s" % resp['status'])
-        conn_l.debug(resp)
+        conn_l.debug(dict(resp))
         if resp['status'] == '200':
             conn_l.debug("Cont_IRI GET resource successful - got %s bytes from %s" % (len(content), content_iri))
             class ContentWrapper(object):
