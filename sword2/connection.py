@@ -292,16 +292,16 @@ Loading in a locally held Service Document:
         4XX not listed:
             Will throw a general `sword2.exceptions.HTTPResponseError` exception
         """
-        if resp['status'] == "401":
+        if resp['status'] == 401:
             conn_l.error("You are unauthorised (401) to access this document on the server. Check your username/password credentials and your 'On Behalf Of'")
             return self._return_error_or_exception(NotAuthorised, resp, content)
-        elif resp['status'] == "403":
+        elif resp['status'] == 403:
             conn_l.error("You are Forbidden (401) to POST to '%s'. Check your username/password credentials and your 'On Behalf Of'")
             return self._return_error_or_exception(Forbidden, resp, content)
-        elif resp['status'] == "406":
+        elif resp['status'] == 406:
             conn_l.error("Cannot negotiate for desired format/packaging on '%s'.")
             return self._return_error_or_exception(NotAcceptable, resp, content)
-        elif resp['status'] == "408":
+        elif resp['status'] == 408:
             conn_l.error("Request Timeout (408) - error uploading.")
             return self._return_error_or_exception(RequestTimeOut, resp, content)
         elif int(resp['status']) > 499:
@@ -391,11 +391,13 @@ Loading in a locally held Service Document:
                              sd_iri = self.sd_iri,
                              response = resp, 
                              process_duration = took_time)
-        if resp['status'] == "200":
+        if resp['status'] == 200:
             conn_l.info("Received a document for %s" % self.sd_iri)
             self.load_service_document(content)
-        elif resp['status'] == "401":
+        elif resp['status'] == 401:
             conn_l.error("You are unauthorised (401) to access this document on the server. Check your username/password credentials")
+        else:
+            conn_l.error("Unexpected response status: " + str(resp['status']))
         
     def reset_transaction_history(self):
         """ Clear the transaction history - `self.history`"""
@@ -606,7 +608,7 @@ Loading in a locally held Service Document:
             conn_l.error("Parameters were not complete: requires a metadata_entry, or a payload/filename/packaging or both")
             raise Exception("Parameters were not complete: requires a metadata_entry, or a payload/filename/packaging or both")
         
-        if resp['status'] == "201":
+        if resp['status'] == 201:
             #   Deposit receipt in content
             conn_l.info("Received a Resource Created (201) response.")
             # Check response headers for updated Location IRI
@@ -629,13 +631,13 @@ Loading in a locally held Service Document:
                 d.code = 201
                 d.location = location
                 return d
-        elif resp['status'] == "204":
+        elif resp['status'] == 204:
             #   Deposit receipt in content
             conn_l.info("Received a valid 'No Content' (204) response.")
             location = resp.get('location', None)
             # Check response headers for updated Locatio
             return Deposit_Receipt(response_headers = dict(resp), location=location, code=204)
-        elif resp['status'] == "200":
+        elif resp['status'] == 200:
             #   Deposit receipt in content
             conn_l.info("Received a valid (200) OK response.")
             content_type = resp.get('content-type')
@@ -1765,7 +1767,7 @@ Response:
                              process_duration = took_time)
         conn_l.info("Server response: %s" % resp['status'])
         conn_l.debug(dict(resp))
-        if resp['status'] == '200':
+        if resp['status'] == 200:
             conn_l.debug("Cont_IRI GET resource successful - got %s bytes from %s" % (len(content), content_iri))
             class ContentWrapper(object):
                 def __init__(self, resp, content):
@@ -1774,7 +1776,7 @@ Response:
                     self.code = resp.status
             return ContentWrapper(resp, content)
         # NOTE: let the core error handling deal with this
-        #elif resp['status'] == '406':   # Unavailable packaging format 
+        #elif resp['status'] == 406:   # Unavailable packaging format 
         #    conn_l.error("Desired packaging format '%' not available from the server.")
         #    return self._return_error_or_exception(PackagingFormatNotAvailable, resp, content)
         else:
