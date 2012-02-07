@@ -13,3 +13,4 @@ from utils import Timer, NS, get_md5, create_multipart_related
 from implementation_info import *
 from atom_objects import Entry, Category
 from http_layer import HttpLayer, HttpResponse, HttpLib2Layer, UrlLib2Layer
+from auto_discovery import AutoDiscovery
