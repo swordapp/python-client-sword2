@@ -1,3 +1,6 @@
+from sword2_logging import logging
+http_l = logging.getLogger(__name__)
+
 class HttpResponse(object):
     def __init__(self, *args, **kwargs):
         pass
@@ -38,9 +41,13 @@ class HttpLib2Response(HttpResponse):
         self.status = int(self.resp.status)
         
     def __getitem__(self, att):
+        if att == "status":
+            return self.status
         return self.resp[att]
     
     def get(self, att, default=None):
+        if att == "status":
+            return self.status
         return self.resp.get(att, default)
         
     def keys(self):
