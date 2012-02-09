@@ -848,7 +848,7 @@ class TestConnection(TestController):
         
         # check the states
         assert len(statement.states) == 1
-        assert statement.states[0][0] == "http://databank.ox.ac.uk/state/PopulatedDataset"
+        assert statement.states[0][0] == "http://databank.ox.ac.uk/state/ZipFileAdded"
         
         print etree.tostring(statement.dom, pretty_print=True)
         
