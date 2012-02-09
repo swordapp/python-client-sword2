@@ -161,6 +161,9 @@ class Entry(object):
         
         Any keyword parameters passed in will be passed to the add_fields method and added to the entry
         bootstrap document. It's currently not possible to add a namespace and use it within the init call."""
+        
+        # create a namespace map which we'll use in all of the elements
+        self.nsmap = {"dcterms" : "http://purl.org/dc/terms/", "atom" : "http://www.w3.org/2005/Atom"}
         self.entry = etree.fromstring(self.bootstrap)
         if not 'updated' in kw.keys():
             kw['updated'] = datetime.now().isoformat()
@@ -170,10 +173,20 @@ class Entry(object):
         """Registers a namespace,, making it available for use when adding subsequent fields to the entry.
         
         Registration will also affect the XML export, adding in the xmlns:prefix="url" attribute when required."""
-        etree.register_namespace(prefix, uri)
+        try:
+            etree.register_namespace(prefix, uri)
+        except AttributeError as e:
+            # the etree implementation we're using doesn't support register_namespace
+            # (probably lxml)
+            pass
         self.add_ns.append(prefix)
         if prefix not in NS.keys():
             NS[prefix] = "{%s}%%s" % uri
+            
+        # we also have to handle namespaces internally, for etree implementations which
+        # don't support register_namespace
+        if prefix not in self.nsmap.keys():
+            self.nsmap[prefix] = uri
             
     def add_field(self, k, v):
         """Append a single key-value pair to the `Entry` document. 
@@ -195,7 +208,7 @@ class Entry(object):
             # These should be unique!
             old_e = self.entry.find(NS['atom'] % k)
             if old_e == None:
-                e = etree.SubElement(self.entry, NS['atom'] % k)
+                e = etree.SubElement(self.entry, NS['atom'] % k, nsmap=self.nsmap) # Notice we explicitly declare the nsmap
                 e.text = v
             else:
                 old_e.text = v
@@ -203,7 +216,7 @@ class Entry(object):
             # possible XML namespace, eg 'dcterms_title'
             nmsp, tag = k.split("_", 1)
             if nmsp in self.add_ns:
-                e = etree.SubElement(self.entry, NS[nmsp] % tag)
+                e = etree.SubElement(self.entry, NS[nmsp] % tag, nsmap=self.nsmap) # Notice we explicitly declare the nsmap
                 e.text = v
         elif k == "author" and isinstance(v, dict):
             self.add_author(**v)
@@ -222,14 +235,14 @@ class Entry(object):
     def add_author(self, name, uri=None, email=None):
         """Convenience function to add in the atom:author elements in the fashion
         required for Atom"""
-        a = etree.SubElement(self.entry, NS['atom'] % 'author')
-        n = etree.SubElement(a, NS['atom'] % 'name')
+        a = etree.SubElement(self.entry, NS['atom'] % 'author', nsmap=self.nsmap)
+        n = etree.SubElement(a, NS['atom'] % 'name', nsmap=self.nsmap)
         n.text = name
         if uri:
-            u = etree.SubElement(a, NS['atom'] % 'uri')
+            u = etree.SubElement(a, NS['atom'] % 'uri', nsmap=self.nsmap)
             u.text = uri
         if email:
-            e = etree.SubElement(a, NS['atom'] % 'email')
+            e = etree.SubElement(a, NS['atom'] % 'email', nsmap=self.nsmap)
             e.text = email
 
     def __str__(self):

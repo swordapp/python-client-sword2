@@ -27,20 +27,6 @@ class TestConnection(TestController):
         assert conn.sd.valid == True 
         assert len(conn.sd.workspaces) == 1
     
-    """
-    def test_02_get_service_document_on_behalf_of(self):
-        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
-        conn.get_service_document()
-        
-        # given that the client is fully functional, testing that the
-        # service document parses and is valid is sufficient.  This, obviously,
-        # doesn't test the validation routine itself.
-        assert conn.sd != None
-        assert conn.sd.parsed == True
-        assert conn.sd.valid == True 
-        assert len(conn.sd.workspaces) == 1
-    """
-    
     def test_02_get_service_document_unauthorised(self):
         conn = Connection(SSS_URL, user_name="alsdkfjsdz", user_pass="ZAKJKLASJDF")
         conn.get_service_document()
@@ -158,12 +144,17 @@ class TestConnection(TestController):
         conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
         conn.get_service_document()
         col = conn.sd.workspaces[0][1][0]
-        e = Entry(title="An entry only deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        
+        e = Entry(title="An entry only deposit", id="asidjasidj", 
+                    dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        e.register_namespace("oxds", "http://databank.ox.ac.uk/terms/")
+        e.add_field("oxds_whatever", "whatever")
+        
         receipt = conn.create(col_iri = col.href,
                     metadata_entry = e,
                     in_progress = True,
                     suggested_identifier = str(uuid.uuid4()))
-                        
+        
         assert receipt.code == 201
         assert receipt.location != None
         
