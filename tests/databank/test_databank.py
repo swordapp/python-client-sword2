@@ -862,6 +862,37 @@ class TestConnection(TestController):
         print "Metadata Count: " + str(md_count)
         assert md_count == 3
 
+    def test_34_check_metadata_only_state(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        e = Entry(title="An entry only deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        receipt = conn.create(col_iri = col.href, metadata_entry = e)
+        statement = conn.get_ore_sword_statement(receipt.ore_statement_iri)
+
+        assert len(statement.states) == 1
+        assert statement.states[0][0] == "http://databank.ox.ac.uk/state/EmptyContainer"
+
+    def test_35_check_new_zip_state(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        e = Entry(title="An entry only deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        receipt = conn.create(col_iri = col.href, metadata_entry = e)
+        with open(PACKAGE) as pkg:
+            new_receipt = conn.update(dr = receipt,
+                            payload=pkg,
+                            mimetype=PACKAGE_MIME,
+                            filename="update.zip",
+                            packaging='http://purl.org/net/sword/package/SimpleZip')
+        statement = conn.get_ore_sword_statement(receipt.ore_statement_iri)
+        
+        assert len(statement.states) == 1
+        assert statement.states[0][0] == "http://databank.ox.ac.uk/state/ZipFileAdded"
+        
+    # FIXME: when we do the full swordv2 implementation, we need to do a number of
+    # checks to ensure that metadata and content states are properly treated
+
     """
     def test_34_complete_deposit(self):
         conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
