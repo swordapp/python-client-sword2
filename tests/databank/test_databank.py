@@ -890,6 +890,29 @@ class TestConnection(TestController):
         assert len(statement.states) == 1
         assert statement.states[0][0] == "http://databank.ox.ac.uk/state/ZipFileAdded"
         
+    def test_36_check_md5(self):
+        conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW)
+        conn.get_service_document()
+        col = conn.sd.workspaces[0][1][0]
+        e = Entry(title="An entry only deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        receipt = conn.create(col_iri = col.href, metadata_entry = e)
+        with open(PACKAGE) as pkg:
+            new_receipt = conn.update(dr = receipt,
+                            payload=pkg,
+                            mimetype=PACKAGE_MIME,
+                            filename="update.zip",
+                            packaging='http://purl.org/net/sword/package/SimpleZip',
+                            md5sum="123456789") # pass in a known md5 (even though it is wrong)
+        statement = conn.get_ore_sword_statement(receipt.ore_statement_iri)
+        
+        # need to try and extract the md5 from the dom
+        count = 0
+        for element in statement.dom.findall("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}Description/{http://vocab.ox.ac.uk/dataset/schema#}hasMD5"):
+            count += 1
+            assert element.text.strip() == "123456789"
+        
+        assert count == 1
+        
     # FIXME: when we do the full swordv2 implementation, we need to do a number of
     # checks to ensure that metadata and content states are properly treated
 
