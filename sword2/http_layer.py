@@ -119,7 +119,9 @@ class UrlLib2Layer(HttpLayer):
         new_handlers = current_handlers + [auth_handler]
         self.opener = urllib2.build_opener(*new_handlers)
     
-    def request(self, uri, method, headers=None, body=None): 
+    def request(self, uri, method, headers=None, body=None):
+        if headers is None:
+            headers = {}
         # should return a tuple of an HttpResponse object and the content
         try:
             if method == "GET":

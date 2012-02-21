@@ -1,11 +1,13 @@
 from sword2_logging import logging
 ad_l = logging.getLogger(__name__)
 
+# FIXME: sgmllib is deprecated, and removed from Python 3.  If moving to
+# Python 3 will need to look at http.parser instead or etree.HTMLParser
 import sgmllib, http_layer
 
 class AutoDiscovery(sgmllib.SGMLParser):
 
-    def __init__(self, url, http_impl=None):
+    def __init__(self, url=None, http_impl=None):
         sgmllib.SGMLParser.__init__(self)
         
         self.url = url
@@ -13,6 +15,8 @@ class AutoDiscovery(sgmllib.SGMLParser):
         self.collection = None
         self.entry = None
         self.statement = []
+        self.data = None
+        self.response = None
         
         if http_impl is None:
             ad_l.info("Loading default HTTP layer")
@@ -21,10 +25,13 @@ class AutoDiscovery(sgmllib.SGMLParser):
             ad_l.info("Using provided HTTP layer")
             self.http = http_impl
         
-        self._discover(url)
+        if url is not None:
+            self.discover(url)
 
-    def _discover(self, url):
+    def discover(self, url):
         resp, content = self.http.request(url, "GET")
+        self.response = resp
+        self.data = content
         if content is not None:
             self.feed(content)
 
