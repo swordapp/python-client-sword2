@@ -117,7 +117,7 @@ process_duration:   0.00482511520386
 Please see the testsuite for this class for more examples of the sorts of transactions that can be done. (tests/test_connection*.py)
 """
 
-    def __init__(self, service_document_iri, 
+    def __init__(self, service_document_iri=None, 
                        user_name=None,
                        user_pass=None,
                        on_behalf_of=None,
@@ -500,12 +500,6 @@ Loading in a locally held Service Document:
         if metadata_relevant:
             headers['Metadata-Relevant'] = str(metadata_relevant).lower()
         
-        if hasattr(payload, 'read'):
-            # Need to work out why a 401 challenge will stop httplib2 from sending the file...
-            # likely need to make it re-seek to 0...
-            # FIXME: In the meantime, read the file into memory... *sigh*
-            payload = payload.read()
-        
         self._t.start(request_type)
         if empty:
             # NULL body with explicit zero length.
@@ -538,7 +532,7 @@ Loading in a locally held Service Document:
             data = str(metadata_entry)
             headers['Content-Length'] = str(len(data))
             
-            resp, content = self.h.request(target_iri, method, headers=headers, body = data)
+            resp, content = self.h.request(target_iri, method, headers=headers, payload=data)
             _, took_time = self._t.time_since_start(request_type)
             if self.history:
                 self.history.log(request_type + ": Metadata-only resource request", 
@@ -596,7 +590,7 @@ Loading in a locally held Service Document:
             if packaging is not None:
                 headers['Packaging'] = str(packaging)
             
-            resp, content = self.h.request(target_iri, method, headers=headers, body = payload)
+            resp, content = self.h.request(target_iri, method, headers=headers, payload=payload)
             _, took_time = self._t.time_since_start(request_type)
             if self.history:
                 self.history.log(request_type + ": simple resource request",

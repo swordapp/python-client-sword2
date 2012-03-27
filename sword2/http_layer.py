@@ -60,8 +60,13 @@ class HttpLib2Layer(HttpLayer):
     def add_credentials(self, username, password):
         self.h.add_credentials(username, password)
         
-    def request(self, uri, method, headers=None, body=None):
-        resp, content = self.h.request(uri, method, headers=headers, body=body)
+    def request(self, uri, method, headers=None, payload=None):
+        if hasattr(payload, 'read'):
+            # Need to work out why a 401 challenge will stop httplib2 from sending the file...
+            # likely need to make it re-seek to 0...
+            # FIXME: In the meantime, read the file into memory... *sigh*
+            payload = payload.read()
+        resp, content = self.h.request(uri, method, headers=headers, body=payload)
         return (HttpLib2Response(resp), content)
 
 ################################################################################    
@@ -106,7 +111,27 @@ class UrlLib2Response(HttpResponse):
         
     def keys(self):
         return self.headers.keys() + ["status"]
-    
+
+# http://stackoverflow.com/questions/2502596/python-http-post-a-large-file-with-streaming
+"""
+import urllib2
+import mmap
+
+# Open the file as a memory mapped string. Looks like a string, but 
+# actually accesses the file behind the scenes. 
+f = open('somelargefile.zip','rb')
+mmapped_file_as_string = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+
+# Do the request
+request = urllib2.Request(url, mmapped_file_as_string)
+request.add_header("Content-Type", "application/zip")
+response = urllib2.urlopen(request)
+
+#close everything
+mmapped_file_as_string.close()
+f.close()
+"""
+
 class UrlLib2Layer(HttpLayer):
     def __init__(self, opener=None):
         self.opener = opener
@@ -119,7 +144,9 @@ class UrlLib2Layer(HttpLayer):
         new_handlers = current_handlers + [auth_handler]
         self.opener = urllib2.build_opener(*new_handlers)
     
-    def request(self, uri, method, headers=None, body=None):
+    def request(self, uri, method, headers=None, payload=None):
+        # NOTE: payload can be a file or a string
+        
         if headers is None:
             headers = {}
         # should return a tuple of an HttpResponse object and the content
@@ -129,15 +156,11 @@ class UrlLib2Layer(HttpLayer):
                 response = self.opener.open(req)
                 return UrlLib2Response(response), response.read()
             elif method == "POST":
-                # FIXME: this approach doesn't scale, we need to fix this here and
-                # in the python sword2 client itself
-                req = urllib2.Request(uri, body, headers)
+                req = urllib2.Request(uri, payload, headers)
                 response = self.opener.open(req)
                 return UrlLib2Response(response), response.read()
             elif method == "PUT":
-                # FIXME: this approach doesn't scale, we need to fix this here and
-                # in the python sword2 client itself
-                req = urllib2.Request(uri, body, headers)
+                req = urllib2.Request(uri, payload, headers)
                 # monkey-patch the request method (which seems to be the fastest
                 # way to do this)
                 req.get_method = lambda: 'PUT'
