@@ -143,16 +143,21 @@ class ServiceDocument(object):
                         continue
                     
                     # since we have no sub-service document, we must validate
-                    accept_valid = False
-                    multipart_accept_valid = False
+                    accept_valid = True
+                    multipart_accept_valid = True
                     accepts = col.findall(NS['app'] % "accept")
                     for accept in accepts:
                         multipart = accept.get("alternate")
-                        if not multipart_accept_valid:
-                            multipart_accept_valid = multipart is not None and multipart == "multipart-related"
-                        if not accept_valid:
-                            accept_valid = multipart is None
+                        if multipart is not None:
+                            if multipart != "multipart-related":
+                                multipart_accept_valid = False
+                                sd_l.debug("Multipart accept alternate is incorrect: " + str(multipart))
+                        else:
+                            # FIXME: we could test to see if the content is viable, but probably that's pointless
+                            pass
+                         
                     if not multipart_accept_valid or not accept_valid:
+                        sd_l.debug("Either the multipart accept or the accept fields were invalid (see above debug)")
                         valid = False
         
         return valid
