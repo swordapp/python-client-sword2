@@ -235,16 +235,16 @@ Availible attributes:
             elif rel == "edit-media":
                 # only put the edit-media iri in the convenience attribute if
                 # there is no 'type'
-                if not ('type' in e.attrib.keys()):
-                    self.edit_media = e.attrib.get('href', None)
-                elif e.attrib['type'] == "application/atom+xml;type=feed":
+                if self._normalise_mime(e.attrib['type']) == "application/atom+xml;type=feed":
                     self.edit_media_feed = e.attrib.get('href', None)
+                else:
+                    self.edit_media = e.attrib.get('href', None)
             elif rel == "http://purl.org/net/sword/terms/add":
                 self.se_iri = e.attrib.get('href', None)
             elif rel == "alternate":
                 self.alternate = e.attrib.get('href', None)
             elif rel == "http://purl.org/net/sword/terms/statement":
-                t = e.attrib.get("type")
+                t = self._normalise_mime(e.attrib.get("type"))
                 if t is not None and t == "application/atom+xml;type=feed":
                     self.atom_statement_iri = e.attrib.get('href', None)
                 elif t is not None and t == "application/rdf+xml":
@@ -259,7 +259,11 @@ Availible attributes:
                 self.links[rel].append(attribs)
             else:
                 self.links[rel] = [attribs]            
-            
+    
+    def _normalise_mime(self, mime):
+        if mime is None:
+            return None
+        return mime.lower().replace(" ", "")
         
     def handle_content(self, e):
         """Method to intepret the <atom:content> elements."""
