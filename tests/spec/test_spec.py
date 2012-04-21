@@ -267,7 +267,7 @@ class TestConnection(TestController):
    
     def test_14_error_retrieve_content_em_iri(self):
         conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW,
-                            error_response_raises_exceptions=False)
+                            honour_receipts=False, error_response_raises_exceptions=False)
         conn.get_service_document()
         col = conn.sd.workspaces[0][1][0]
         with open(PACKAGE) as pkg:
@@ -322,7 +322,8 @@ class TestConnection(TestController):
                         payload=pkg, 
                         mimetype=PACKAGE_MIME, 
                         filename="example.zip",
-                        packaging='http://purl.org/net/sword/package/SimpleZip')
+                        packaging='http://purl.org/net/sword/package/SimpleZip',
+                        in_progress=True)
         # ensure that we have a receipt (the server may not give us one
         # by default)
         receipt = conn.get_deposit_receipt(receipt.location)
