@@ -483,14 +483,15 @@ class TestConnection(TestController):
         conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)
         conn.get_service_document()
         col = conn.sd.workspaces[0][1][0]
-        e = Entry(title="Multipart deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
+        # e = Entry(title="Multipart deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
         with open(PACKAGE) as pkg:
             receipt = conn.create(col_iri = col.href,
-                        metadata_entry = e,
+                        # metadata_entry = e,
                         payload=pkg, 
                         mimetype=PACKAGE_MIME, 
                         filename="example.zip",
-                        packaging = 'http://purl.org/net/sword/package/SimpleZip')
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip',
+                        in_progress=True)
         
         # ensure that we have a receipt (the server may not give us one
         # by default)

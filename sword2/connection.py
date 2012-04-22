@@ -638,7 +638,8 @@ Loading in a locally held Service Document:
             conn_l.info("Received a valid (200) OK response.")
             content_type = resp.get('content-type')
             location = resp.get('location', None)
-            if content_type == "application/atom+xml;type=entry" and len(content) > 0:
+            # content type header may also includ charset
+            if self._normalise_mime(content_type).startswith("application/atom+xml;type=entry") and len(content) > 0: 
                 d = Deposit_Receipt(content)
                 if d.parsed:
                     conn_l.info("Server response included a Deposit Receipt. Caching a copy in .resources['%s']" % d.edit)
@@ -1093,7 +1094,10 @@ response_headers, etc)
 
 
 2. "Adding New Metadata to a Container"
----------------------------------------
+-------------------------------------def _normalise_mime(self, mime):
+        if mime is None:
+            return None
+        return mime.lower().replace(" ", "")--
 
 NB SWORD2 does not instruct the server on the best way to handle metadata, only that metadata SHOULD be 
 added and not overwritten; in certain circumstances this may not produce the desired behaviour. 
@@ -1777,4 +1781,9 @@ Response:
         #    return self._return_error_or_exception(PackagingFormatNotAvailable, resp, content)
         else:
             return self._handle_error_response(resp, content)
+            
+    def _normalise_mime(self, mime):
+        if mime is None:
+            return None
+        return mime.lower().replace(" ", "")
 
