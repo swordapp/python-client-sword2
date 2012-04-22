@@ -348,7 +348,8 @@ class TestConnection(TestController):
                         payload=pkg, 
                         mimetype=PACKAGE_MIME, 
                         filename="example.zip",
-                        packaging='http://purl.org/net/sword/package/SimpleZip')
+                        packaging='http://purl.org/net/sword/package/SimpleZip',
+                        in_progress=True)
         # ensure that we have a receipt (the server may not give us one
         # by default)
         receipt = conn.get_deposit_receipt(receipt.location)
@@ -370,7 +371,7 @@ class TestConnection(TestController):
         conn.get_service_document()
         col = conn.sd.workspaces[0][1][0]
         e = Entry(title="An entry only deposit", id="asidjasidj", dcterms_abstract="abstract", dcterms_identifier="http://whatever/")
-        receipt = conn.create(col_iri = col.href, metadata_entry = e)
+        receipt = conn.create(col_iri = col.href, metadata_entry = e, in_progress=True)
         
         # ensure that we have a receipt (the server may not give us one
         # by default)

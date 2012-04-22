@@ -107,7 +107,7 @@ Availible attributes:
         self.code = code
         self.metadata = {}
         self.links = {}
-        self.edit = None
+        self.edit = location # default to the location, which should always be the same as the edit-iri
         self.edit_media = None
         self.edit_media_feed = None
         self.alternate = None
