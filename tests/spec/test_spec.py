@@ -512,7 +512,8 @@ class TestConnection(TestController):
                         payload=pkg, 
                         mimetype=PACKAGE_MIME, 
                         filename="example.zip",
-                        packaging = 'http://purl.org/net/sword/package/SimpleZip')
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip',
+                        in_progress=True)
         receipt = conn.get_deposit_receipt(receipt.location)
         
         with open(PACKAGE) as pkg:
@@ -531,7 +532,8 @@ class TestConnection(TestController):
                         payload=pkg, 
                         mimetype=PACKAGE_MIME, 
                         filename="example.zip",
-                        packaging = 'http://purl.org/net/sword/package/SimpleZip')
+                        packaging = 'http://purl.org/net/sword/package/SimpleZip',
+                        in_progress=True)
         receipt = conn.get_deposit_receipt(receipt.location)
         
         with open(PACKAGE) as pkg:
