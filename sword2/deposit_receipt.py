@@ -235,7 +235,7 @@ Availible attributes:
             elif rel == "edit-media":
                 # only put the edit-media iri in the convenience attribute if
                 # there is no 'type'
-                if self._normalise_mime(e.attrib['type']) == "application/atom+xml;type=feed":
+                if self._normalise_mime(e.attrib.get('type')) == "application/atom+xml;type=feed":
                     self.edit_media_feed = e.attrib.get('href', None)
                 else:
                     self.edit_media = e.attrib.get('href', None)
