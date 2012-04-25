@@ -1,0 +1,22 @@
+Source: python-sword-client
+Section: python
+Priority: extra
+Maintainer: Alexander Dutton <alexander.dutton@oucs.ox.ac.uk>
+Build-Depends: debhelper (>= 7.0.50~),
+               python-all,
+               python-setuptools,
+               python-lxml,
+               python-nose,
+               python-webpy
+Standards-Version: 3.8.4
+X-Python-Version: >= 2.6
+Homepage: https://github.com/oucs/humfrey
+Vcs-Git: git://github.com/oucs/humfrey.git
+
+Package: python-sword-client
+Section: python
+Architecture: all
+Depends: ${misc:Depends},
+         ${python:Depends},
+         python-lxml
+Description: A Python library and client to connect to and use SWORD v2 compliant servers.
