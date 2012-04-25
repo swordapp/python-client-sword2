@@ -7,7 +7,8 @@ Build-Depends: debhelper (>= 7.0.50~),
                python-setuptools,
                python-lxml,
                python-nose,
-               python-webpy
+               python-webpy,
+               python-httplib2
 Standards-Version: 3.8.4
 X-Python-Version: >= 2.6
 Homepage: https://github.com/oucs/humfrey
@@ -18,5 +19,6 @@ Section: python
 Architecture: all
 Depends: ${misc:Depends},
          ${python:Depends},
-         python-lxml
+         python-lxml,
+         python-httplib2
 Description: A Python library and client to connect to and use SWORD v2 compliant servers.
