@@ -794,7 +794,7 @@ class TestConnection(TestController):
         e = Entry(title="Foo", id="asidjasidj", dcterms_abstract="abstract", dcterms_title="my title")
         with open(PACKAGE) as pkg:
             receipt = conn.create(col_iri = col.href,
-                        metadata_entry = e,
+                        # metadata_entry = e,
                         payload=pkg, 
                         mimetype=PACKAGE_MIME, 
                         filename="example.zip",
