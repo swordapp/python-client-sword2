@@ -1,0 +1,9 @@
+Format-Specification: http://anonscm.debian.org/viewvc/dep/web/deps/dep5/copyright-format.xml?revision=248
+Upstream-Contact: Sword Project
+Source: https://github.com/swordapp/python-client-sword2
+
+Files: *
+Copyright: 2011-2012, Ben O'Steen and contributors <bosteen@gmail.com>
+License: MIT
+
+
