@@ -1,0 +1,3 @@
+recursive-include sword2/data *
+include LICENSE.txt
+include README
