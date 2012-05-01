@@ -1644,8 +1644,6 @@ packaging and headers explicitly to overcome
     def get_ore_sword_statement(self, sword_statement_iri):
         """
 Getting the Sword Statement.
-
-IN PROGRESS - USE AT OWN RISK.... see `sword2.Sword_Statement`.
         """
         # get the statement first
         conn_l.debug("Trying to GET the ORE Sword Statement at %s." % sword_statement_iri)
@@ -1664,8 +1662,6 @@ IN PROGRESS - USE AT OWN RISK.... see `sword2.Sword_Statement`.
     def get_atom_sword_statement(self, sword_statement_iri):
         """
 Getting the Sword Statement.
-
-IN PROGRESS - USE AT OWN RISK.... see `sword2.Sword_Statement`.
         """
         # get the statement first
         conn_l.debug("Trying to GET the ATOM Sword Statement at %s." % sword_statement_iri)
@@ -1781,7 +1777,23 @@ Response:
         #    return self._return_error_or_exception(PackagingFormatNotAvailable, resp, content)
         else:
             return self._handle_error_response(resp, content)
-            
+    
+    def replace_file(self, file_edit_media, payload, mimetype, packaging=None, on_behalf_of=None, metadata_relevant=False):
+        """
+        API Sugar for replacing any given file (such as that retrieved from a feed of the media resource)
+        This supports all the headers required by 6.11 of the spec
+        """
+        return self._make_request(file_edit_media, payload=payload, mimetype=mimetype, filename="unnamed",
+                                    packaging=packaging, on_behalf_of=on_behalf_of, metadata_relevant=metadata_relevant,
+                                    method="PUT")
+    
+    def delete_file(self, file_edit_media, on_behalf_of=None):
+        """
+        API sugar for deleting a given file (such as that retrieved from a feed of the media resource).
+        This supports all the headers required by 6.11 of the spec
+        """
+        return self._make_request(file_edit_media, on_behalf_of=on_behalf_of, method="DELETE")
+    
     def _normalise_mime(self, mime):
         if mime is None:
             return None

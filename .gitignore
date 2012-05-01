@@ -1,0 +1,7 @@
+.cache/
+build/
+dist/
+sword2.egg-info/
+*.pyc
+*.py~
+
