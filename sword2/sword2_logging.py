@@ -5,11 +5,13 @@
 `sword2` logging
 """
 
+import imp
+import os
 import logging
 import logging.config
-from os import path as os_path
 
-SWORD2_LOGGING_CONFIG = "./sword2_logging.conf"  # default
+_, sword2_path, _ = imp.find_module('sword2')
+SWORD2_LOGGING_CONFIG = os.path.join(sword2_path, 'data', 'sword2_logging.conf')  # default
 
 BASIC_CONFIG = """[loggers]
 keys=root
@@ -39,7 +41,7 @@ def create_logging_config(pathtologgingconf):
     fn.write(BASIC_CONFIG)
     fn.close()
 
-if not os_path.isfile(SWORD2_LOGGING_CONFIG):
+if not os.path.isfile(SWORD2_LOGGING_CONFIG):
     create_logging_config(SWORD2_LOGGING_CONFIG)
 
 logging.config.fileConfig(SWORD2_LOGGING_CONFIG)
