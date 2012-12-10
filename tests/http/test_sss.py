@@ -309,7 +309,7 @@ class TestConnection(TestController):
         dr = conn.append(se_iri = deposit_receipt.se_iri,
                                               metadata_entry = e,
                                               in_progress=False)
-        assert dr.code == 201       
+        assert dr.code == 200    
 
     def test_19_File_POST_to_se_iri(self):
         conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
@@ -328,7 +328,7 @@ class TestConnection(TestController):
                                               mimetype = "text/plain",
                                               filename = "readthisextrafile.txt",
                                               packaging = "http://purl.org/net/sword/package/Binary")
-        assert dr.code == 201
+        assert dr.code == 200
 
     def test_20_Multipart_POST_to_se_iri(self):
         conn = Connection("http://localhost:%s/sd-uri" % PORT_NUMBER, user_name="sword", user_pass="sword", download_service_document=True)
@@ -350,7 +350,7 @@ class TestConnection(TestController):
                                               packaging = "http://purl.org/net/sword/package/Binary",
                                               metadata_entry = e)
         print dr.code
-        assert dr.code == 201
+        assert dr.code == 200
 
 
     def test_21_Create_deposit_and_delete_content(self):
@@ -415,4 +415,5 @@ class TestConnection(TestController):
         assert ss_iri != None
         ss = conn.get_atom_sword_statement(ss_iri)
         assert ss != None
-        assert ss.entries[0].metadata.get('sword_depositedBy') == 'sword'
+        assert ss.resources[0].deposited_by == 'sword'
+        # assert ss.entries[0].metadata.get('sword_depositedBy') == 'sword'

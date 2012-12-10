@@ -735,7 +735,7 @@ class TestConnection(TestController):
         another_receipt = conn.get_deposit_receipt(edit_iri)
         
         # FIXME: this is the broken assert
-        assert another_receipt.code == 404
+        assert another_receipt.code == 404, another_receipt.code
 
     def test_32_get_atom_statement(self):
         conn = Connection(SSS_URL, user_name=SSS_UN, user_pass=SSS_PW, on_behalf_of=SSS_OBO)

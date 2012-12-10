@@ -212,10 +212,16 @@ def create_multipart_related(payloads):
         if payload['key'] == 'payload':
             body.append('Content-Transfer-Encoding: base64')
             body.append('')
-            body.append(b64encode(payload['data']))
+            if hasattr(payload['data'], 'read'):
+                body.append(b64encode(payload['data'].read()))
+            else:
+                body.append(b64encode(payload['data']))
         else:
             body.append('')
-            body.append(payload['data'])
+            if hasattr(payload['data'], 'read'):
+                body.append(b64encode(payload['data'].read()))
+            else:
+                body.append(b64encode(payload['data']))
     body.append('--' + BOUNDARY + '--')
     body.append('')
     body_bytes = CRLF.join(body)

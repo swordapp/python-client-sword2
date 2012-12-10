@@ -562,7 +562,7 @@ Loading in a locally held Service Document:
                                                                    
             headers['Content-Type'] = multicontent_type + '; type="application/atom+xml"'
             headers['Content-Length'] = str(len(payload_data))    # must be str, not int type
-            resp, content = self.h.request(target_iri, method, headers=headers, body = payload_data)
+            resp, content = self.h.request(target_iri, method, headers=headers, payload=payload_data)
             _, took_time = self._t.time_since_start(request_type)
             if self.history:
                 self.history.log(request_type + ": Multipart resource request",

@@ -67,11 +67,11 @@ DR = """<?xml version="1.0" ?>
 class TestDepositReceipt(TestController):
     def test_01_init(self):
         dr = Deposit_Receipt(DR)
-        assert dr.metadata['dcterms_title'] == "Title"
-        assert dr.metadata['atom_id'] == "info:something:1"
+        assert dr.metadata['dcterms_title'][0] == "Title", dr.metadata['dcterms_title']
+        assert dr.metadata['atom_id'][0] == "info:something:1"
         assert dr.id == "info:something:1"
         assert dr.title == "My Deposit"
-        assert dr.metadata['sword_verboseDescription'] == "Verbose description"
+        assert dr.metadata['sword_verboseDescription'][0] == "Verbose description"
         
     def test_02_edit(self):
         dr = Deposit_Receipt(DR)
