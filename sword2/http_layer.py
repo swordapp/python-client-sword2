@@ -54,8 +54,8 @@ class HttpLib2Response(HttpResponse):
         return self.resp.keys()
 
 class HttpLib2Layer(HttpLayer):
-    def __init__(self, cache_dir, timeout=30):
-        self.h = httplib2.Http(".cache", timeout=30.0)
+    def __init__(self, cache_dir=".cache", timeout=30.0):
+        self.h = httplib2.Http(cache_dir, timeout=timeout)
         
     def add_credentials(self, username, password):
         self.h.add_credentials(username, password)
