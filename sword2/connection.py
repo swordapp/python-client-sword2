@@ -25,6 +25,7 @@ from compatible_libs import etree
 
 # import httplib2
 import http_layer
+import urllib
 
 class Connection(object):
     """
@@ -587,7 +588,7 @@ Loading in a locally held Service Document:
             headers['Content-Type'] = str(mimetype)
             headers['Content-MD5'] = str(md5sum)
             headers['Content-Length'] = str(f_size)
-            headers['Content-Disposition'] = "attachment; filename=%s" % filename   # TODO: ensure filename is ASCII
+            headers['Content-Disposition'] = "attachment; filename=%s" % urllib.quote(filename)
             if packaging is not None:
                 headers['Packaging'] = str(packaging)
             
