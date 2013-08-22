@@ -257,7 +257,7 @@ Loading in a locally held Service Document:
         
         `self.raise_except` can be altered at any time to affect this methods behaviour."""
         if self.raise_except:
-            raise cls(resp)
+            raise cls(resp, content)
         else:
             # content type can contain both the mimetype and the charset (e.g. text/xml; charset=utf-8)
             if resp['content-type'].startswith("text/xml") or resp['content-type'].startswith("application/xml"):
@@ -312,7 +312,7 @@ Loading in a locally held Service Document:
             conn_l.error("Server error occured. Response headers from the server:\n%s" % resp)
             return self._return_error_or_exception(ServerError, resp, content)
         else:
-            conn_l.error("Unknown error occured. Response headers from the server:\n%s" % resp)
+            conn_l.error("Unknown error occured. Response headers from the server:\n%s\n%s" % (resp, content))
             return self._return_error_or_exception(HTTPResponseError, resp, content)
     
     def _cache_deposit_receipt(self, d):
