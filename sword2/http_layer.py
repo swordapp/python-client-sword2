@@ -1,3 +1,4 @@
+import json
 from sword2_logging import logging
 http_l = logging.getLogger(__name__)
 
@@ -13,6 +14,9 @@ class HttpResponse(object):
         # status (as an integer)
         # location
         pass
+        
+    def __repr__(self):
+    	return json.dumps(self.__dict__, indent=True)
         
     def get(self, att, default=None):
         # same as __getattr__ but with default return
@@ -54,8 +58,8 @@ class HttpLib2Response(HttpResponse):
         return self.resp.keys()
 
 class HttpLib2Layer(HttpLayer):
-    def __init__(self, cache_dir, timeout=30):
-        self.h = httplib2.Http(".cache", timeout=30.0)
+    def __init__(self, cache_dir, timeout=30, ca_certs=None):
+        self.h = httplib2.Http(".cache", timeout=30.0, ca_certs=ca_certs)
         
     def add_credentials(self, username, password):
         self.h.add_credentials(username, password)

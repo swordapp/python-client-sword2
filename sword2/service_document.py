@@ -149,7 +149,7 @@ class ServiceDocument(object):
                     for accept in accepts:
                         multipart = accept.get("alternate")
                         if multipart is not None:
-                            if multipart != "multipart-related":
+                            if multipart != "multipart-related" and multipart != "multipart/related":
                                 multipart_accept_valid = False
                                 sd_l.debug("Multipart accept alternate is incorrect: " + str(multipart))
                         else:

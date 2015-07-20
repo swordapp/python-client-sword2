@@ -4,4 +4,6 @@ dist/
 sword2.egg-info/
 *.pyc
 *.py~
+*.conf
 
+.DS_Store

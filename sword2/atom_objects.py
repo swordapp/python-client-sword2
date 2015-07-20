@@ -156,7 +156,7 @@ class Entry(object):
         xmlns:dcterms="http://purl.org/dc/terms/">
     <generator uri="http://bitbucket.org/beno/python-sword2" version="%s"/>
 </entry>""" % __version__
-    def __init__(self, **kw):
+    def __init__(self, atomEntryXml=None, **kw):
         """Create a basic `Entry` document, setting the generator and a timestamp for the updated element value.
         
         Any keyword parameters passed in will be passed to the add_fields method and added to the entry
@@ -164,7 +164,7 @@ class Entry(object):
         
         # create a namespace map which we'll use in all of the elements
         self.nsmap = {"dcterms" : "http://purl.org/dc/terms/", "atom" : "http://www.w3.org/2005/Atom"}
-        self.entry = etree.fromstring(self.bootstrap)
+        self.entry = etree.fromstring(self.bootstrap if not atomEntryXml else atomEntryXml)
         if not 'updated' in kw.keys():
             kw['updated'] = datetime.now().isoformat()
         self.add_fields(**kw)

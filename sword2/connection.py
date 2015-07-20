@@ -25,6 +25,7 @@ from compatible_libs import etree
 
 # import httplib2
 import http_layer
+import urllib
 
 class Connection(object):
     """
@@ -128,7 +129,8 @@ Please see the testsuite for this class for more examples of the sorts of transa
                        error_response_raises_exceptions=True,
                        
                        # http layer implementation if different from default
-                       http_impl=None):
+                       http_impl=None,
+                       ca_certs=None):
         """
 Creates a new Connection object.
 
@@ -215,7 +217,7 @@ Loading in a locally held Service Document:
         # set the http layer
         if http_impl is None:
             conn_l.info("Loading default HTTP layer")
-            self.h = http_layer.HttpLib2Layer(".cache", timeout=30.0)
+            self.h = http_layer.HttpLib2Layer(".cache", timeout=30.0, ca_certs=ca_certs)
         else:
             conn_l.info("Using provided HTTP layer")
             self.h = http_impl
@@ -255,7 +257,7 @@ Loading in a locally held Service Document:
         
         `self.raise_except` can be altered at any time to affect this methods behaviour."""
         if self.raise_except:
-            raise cls(resp)
+            raise cls(resp, content)
         else:
             # content type can contain both the mimetype and the charset (e.g. text/xml; charset=utf-8)
             if resp['content-type'].startswith("text/xml") or resp['content-type'].startswith("application/xml"):
@@ -310,7 +312,7 @@ Loading in a locally held Service Document:
             conn_l.error("Server error occured. Response headers from the server:\n%s" % resp)
             return self._return_error_or_exception(ServerError, resp, content)
         else:
-            conn_l.error("Unknown error occured. Response headers from the server:\n%s" % resp)
+            conn_l.error("Unknown error occured. Response headers from the server:\n%s\n%s" % (resp, content))
             return self._return_error_or_exception(HTTPResponseError, resp, content)
     
     def _cache_deposit_receipt(self, d):
@@ -586,7 +588,7 @@ Loading in a locally held Service Document:
             headers['Content-Type'] = str(mimetype)
             headers['Content-MD5'] = str(md5sum)
             headers['Content-Length'] = str(f_size)
-            headers['Content-Disposition'] = "attachment; filename=%s" % filename   # TODO: ensure filename is ASCII
+            headers['Content-Disposition'] = "attachment; filename=%s" % urllib.quote(filename)
             if packaging is not None:
                 headers['Packaging'] = str(packaging)
             
