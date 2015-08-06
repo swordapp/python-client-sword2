@@ -188,7 +188,7 @@ class Entry(object):
         if prefix not in self.nsmap.keys():
             self.nsmap[prefix] = uri
             
-    def add_field(self, k, v):
+    def add_field(self, k, v, attrs=None):
         """Append a single key-value pair to the `Entry` document. 
         
         eg
@@ -218,6 +218,9 @@ class Entry(object):
             if nmsp in self.add_ns:
                 e = etree.SubElement(self.entry, NS[nmsp] % tag, nsmap=self.nsmap) # Notice we explicitly declare the nsmap
                 e.text = v
+                if attrs is not None:
+                    for an, av in attrs.iteritems():
+                        e.set(an, av)
         elif k == "author" and isinstance(v, dict):
             self.add_author(**v)
 
