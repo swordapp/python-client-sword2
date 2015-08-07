@@ -5,34 +5,34 @@ http_l = logging.getLogger(__name__)
 class HttpResponse(object):
     def __init__(self, *args, **kwargs):
         pass
-        
+
     def __getitem__(self, att):
         # needs to behave like a dictionary
         # we need to be able to look up at least:
-        
+
         # content-type
         # status (as an integer)
         # location
         pass
-        
+
     def __repr__(self):
-    	return json.dumps(self.__dict__, indent=True)
-        
+        return json.dumps(self.__dict__, indent=True)
+
     def get(self, att, default=None):
         # same as __getattr__ but with default return
         pass
-        
+
     def keys(self):
         pass
-    
+
 
 class HttpLayer(object):
     def __init__(self, *args, **kwargs): pass
     def add_credentials(self, username, password): pass
-    def request(self, uri, method, headers=None, body=None): 
+    def request(self, uri, method, headers=None, payload=None):
         # should return a tuple of an HttpResponse object and the content
         pass
-        
+
 ################################################################################
 # Default httplib2 implementation
 ################################################################################
@@ -43,27 +43,27 @@ class HttpLib2Response(HttpResponse):
     def __init__(self, response):
         self.resp = response
         self.status = int(self.resp.status)
-        
+
     def __getitem__(self, att):
         if att == "status":
             return self.status
-        return self.resp[att]
-    
+        return self.resp.get(att)
+
     def get(self, att, default=None):
         if att == "status":
             return self.status
         return self.resp.get(att, default)
-        
+
     def keys(self):
         return self.resp.keys()
 
 class HttpLib2Layer(HttpLayer):
     def __init__(self, cache_dir, timeout=30, ca_certs=None):
         self.h = httplib2.Http(".cache", timeout=30.0, ca_certs=ca_certs)
-        
+
     def add_credentials(self, username, password):
         self.h.add_credentials(username, password)
-        
+
     def request(self, uri, method, headers=None, payload=None):
         if hasattr(payload, 'read'):
             # Need to work out why a 401 challenge will stop httplib2 from sending the file...
@@ -83,11 +83,11 @@ class PreemptiveBasicAuthHandler(urllib2.HTTPBasicAuthHandler):
     def __init__(self, username, password):
         self.username = username
         self.password = password
-    
+
     def http_request(self, request):
         request.add_header(self.auth_header, 'Basic %s' % base64.b64encode(self.username + ':' + self.password))
         return request
-    
+
     https_request = http_request
 
 class UrlLib2Response(HttpResponse):
@@ -95,24 +95,24 @@ class UrlLib2Response(HttpResponse):
         self.response = response
         self.headers = dict(response.info())
         self.status = int(self.response.code)
-    
+
     def __getitem__(self, att):
         # needs to behave like a dictionary
         # we need to be able to look up at least:
-        
+
         # content-type
         # status
         # location
         if att == "status":
             return self.status
         return self.headers[att]
-        
+
     def get(self, att, default=None):
         # same as __getattr__ but with default return
         if att == "status":
             return self.status
         return self.headers.get(att, default)
-        
+
     def keys(self):
         return self.headers.keys() + ["status"]
 
@@ -141,16 +141,16 @@ class UrlLib2Layer(HttpLayer):
         self.opener = opener
         if self.opener is None:
             self.opener = urllib2.build_opener()
-    
+
     def add_credentials(self, username, password):
         auth_handler = PreemptiveBasicAuthHandler(username, password)
         current_handlers = self.opener.handlers
         new_handlers = current_handlers + [auth_handler]
         self.opener = urllib2.build_opener(*new_handlers)
-    
+
     def request(self, uri, method, headers=None, payload=None):
         # NOTE: payload can be a file or a string
-        
+
         if headers is None:
             headers = {}
         # should return a tuple of an HttpResponse object and the content

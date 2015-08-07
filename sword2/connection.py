@@ -260,7 +260,7 @@ Loading in a locally held Service Document:
             raise cls(resp, content)
         else:
             # content type can contain both the mimetype and the charset (e.g. text/xml; charset=utf-8)
-            if resp['content-type'].startswith("text/xml") or resp['content-type'].startswith("application/xml"):
+            if resp.get('content-type', "").startswith("text/xml") or resp.get('content-type', "").startswith("application/xml"):
                 conn_l.info("Returning an error document, due to HTTP response code %s" % resp.status)
                 e = Error_Document(content, code=resp.status, resp = resp)
                 return e

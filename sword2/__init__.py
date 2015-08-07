@@ -14,3 +14,4 @@ from implementation_info import *
 from atom_objects import Entry, Category
 from http_layer import HttpLayer, HttpResponse, HttpLib2Layer, UrlLib2Layer
 from auto_discovery import AutoDiscovery
+from deposit_receipt import Deposit_Receipt
