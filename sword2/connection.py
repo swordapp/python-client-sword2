@@ -1165,7 +1165,12 @@ response_headers, etc)
                 if se_iri:
                     conn_l.info("Update Resource via SWORD2-Edit-IRI %s" % se_iri)
                 else:
-                    raise Exception("No SWORD2-Edit-IRI was given and no suitable IRI was found in the deposit receipt.")   
+                    # we could try the edit IRI although technically that's not what it's for
+                    se_iri = dr.edit
+                    if se_iri:
+                        conn_l.info("Complete deposit using the Edit-IRI %s as SWORD2-Edit-IRI not available" % se_iri)
+                    else:
+                        raise Exception("No SWORD2-Edit-IRI was given and no suitable IRI was found in the deposit receipt.")
             else:
                 raise Exception("No SWORD2-Edit-IRI was given")
         else:
@@ -1327,7 +1332,12 @@ and the correct IRI will automatically be chosen.
                 if se_iri:
                     conn_l.info("Complete deposit using the SWORD2-Edit-IRI %s" % se_iri)
                 else:
-                    raise Exception("No SWORD2-Edit-IRI was given and no suitable IRI was found in the deposit receipt.")   
+                    # we could try the edit-media IRI although technically that's not what it's for
+                    se_iri = dr.edit
+                    if se_iri:
+                        conn_l.info("Complete deposit using the Edit-IRI %s as SWORD2-Edit-IRI not available" % se_iri)
+                    else:
+                        raise Exception("No SWORD2-Edit-IRI was given and no suitable IRI was found in the deposit receipt.")
             else:
                 raise Exception("No SWORD2-Edit-IRI was given")
         else:

@@ -128,7 +128,8 @@ Availible attributes:
         # first construct or set the dom
         if xml_deposit_receipt:
             try:
-                self.dom = etree.fromstring(xml_deposit_receipt)
+                # convert the string to a byte array so that it doesn't matter whether it has encoding declared or not
+                self.dom = etree.fromstring(bytes(xml_deposit_receipt))
                 self.parsed = True    
             except Exception, e:
                 d_l.error("Was not able to parse the deposit receipt as XML.")

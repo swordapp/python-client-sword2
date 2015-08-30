@@ -248,6 +248,19 @@ class Entry(object):
             e = etree.SubElement(a, NS['atom'] % 'email', nsmap=self.nsmap)
             e.text = email
 
+    def add_contributor(self, name, uri=None, email=None):
+        """Convenience function to add in the atom:contributor elements in the fashion
+        required for Atom"""
+        a = etree.SubElement(self.entry, NS['atom'] % 'contributor', nsmap=self.nsmap)
+        n = etree.SubElement(a, NS['atom'] % 'name', nsmap=self.nsmap)
+        n.text = name
+        if uri:
+            u = etree.SubElement(a, NS['atom'] % 'uri', nsmap=self.nsmap)
+            u.text = uri
+        if email:
+            e = etree.SubElement(a, NS['atom'] % 'email', nsmap=self.nsmap)
+            e.text = email
+
     def __str__(self):
         """Export the XML to a bytestring, ready for use"""
         xml_str = etree.tostring(self.entry)
