@@ -418,7 +418,11 @@ Loading in a locally held Service Document:
                         
                       metadata_entry=None,  # a sword2.Entry needs to be here, if 
                                               # a metadata entry is to be uploaded
-                        
+                      entry_content_type="application/atom+xml; type=entry",        # content type to use for the atom entry
+                                                                                    # which means it can be overridden if the server has some special
+                                                                                    # requirements (see: EPrints)
+                                                                                    # Only works for singlepart deposit, multipart will have atom-specified mimetype in all cases
+
                       # Set both a file and a metadata entry for the method to perform a multipart
                       # related upload.
                       suggested_identifier=None,   # 'slug'
@@ -530,7 +534,7 @@ Loading in a locally held Service Document:
             
         elif metadata_entry and not (filename and payload):
             # Metadata-only resource creation
-            headers['Content-Type'] = "application/atom+xml;type=entry"
+            headers['Content-Type'] = entry_content_type # "application/atom+xml;type=entry"
             data = str(metadata_entry)
             headers['Content-Length'] = str(len(data))
             
@@ -677,6 +681,7 @@ Loading in a locally held Service Document:
                         
                         metadata_entry=None,  # a sword2.Entry needs to be here, if 
                                               # a metadata entry is to be uploaded
+                        entry_content_type="application/atom+xml; type=entry",      # atom mimetype to use for singlepart deposit
                         
                         # Set both a file and a metadata entry for the method to perform a multipart
                         # related upload.
@@ -837,7 +842,8 @@ The SWORD server is not required to support packaging formats, but this profile 
                                   on_behalf_of=on_behalf_of,
                                   method="POST",
                                   request_type='Col_IRI POST',
-                                  md5sum=md5sum)
+                                  md5sum=md5sum,
+                                  entry_content_type=entry_content_type)
         
     def update(self, metadata_entry = None,    # required for a metadata update
                              payload = None,            # required for a file update      
