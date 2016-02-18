@@ -294,7 +294,7 @@ Loading in a locally held Service Document:
         4XX not listed:
             Will throw a general `sword2.exceptions.HTTPResponseError` exception
         """
-        conn_l.debug("Error body received from server: " + str(content))
+        conn_l.debug(u"Error body received from server: {x}".format(x=unicode(content)))
         
         if resp['status'] == 401:
             conn_l.error("You are unauthorised (401) to access this document on the server. Check your username/password credentials and your 'On Behalf Of'")
