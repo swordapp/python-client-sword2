@@ -134,7 +134,7 @@ Availible attributes:
             except Exception, e:
                 d_l.error("Was not able to parse the deposit receipt as XML.")
                 return
-            
+        
         elif dom != None:
             self.dom = dom
             self.parsed = True
