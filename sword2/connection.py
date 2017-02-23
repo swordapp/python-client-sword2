@@ -621,7 +621,9 @@ Loading in a locally held Service Document:
                 if d.parsed:
                     conn_l.info("Server response included a Deposit Receipt. Caching a copy in .resources['%s']" % d.edit)
                 d.response_headers = dict(resp)
-                d.location = location
+                if location is not None:
+                    d.location = location
+                    d.edit = location
                 d.code = 201
                 self._cache_deposit_receipt(d)
                 return d
