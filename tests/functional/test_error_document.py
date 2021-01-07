@@ -65,7 +65,7 @@ class TestEntry(TestController):
         assert error_d.title == "ERROR"
         assert error_d.summary == """The manifest could be parsed, but was not valid - 
     no technical metadata was provided."""
-        print error_d.metadata
+        print(error_d.metadata)
         assert error_d.verbose_description[0].strip() == """Exception at [ ... ]""", error_d.verbose_description
         
     def test_02_error_info(self):

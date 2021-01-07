@@ -1,9 +1,9 @@
 from datetime import datetime
-from utils import NS, get_text
-from atom_objects import Category
-from deposit_receipt import Deposit_Receipt
-from sword2_logging import logging
-from compatible_libs import etree
+from .utils import NS, get_text
+from .atom_objects import Category
+from .deposit_receipt import Deposit_Receipt
+from .sword2_logging import logging
+from .compatible_libs import etree
 
 s_l = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class Sword_Statement(object):
                 s_l.info("Attempting to parse the Statement XML document")
                 self.dom = etree.fromstring(self.xml_document)
                 self.parsed = True
-            except Exception, e:
+            except Exception as e:
                 s_l.error("Failed to parse document - %s" % e)
                 s_l.error("XML document begins:\n %s" % self.xml_document[:300])
     
@@ -66,7 +66,7 @@ class Atom_Statement_Entry(Deposit_Receipt, Statement_Resource):
         if do is not None and do.text is not None and do.text.strip() != "":
             try:
                 self.deposited_on = datetime.strptime(do.text.strip(), "%Y-%m-%dT%H:%M:%SZ") # e.g. 2011-03-02T20:50:06Z
-            except Exception, e:
+            except Exception as e:
                 s_l.error("Failed to parse date - %s" % e)
                 s_l.error("Supplied date as string was: %s" % do.text.strip())
 
@@ -237,7 +237,7 @@ class Ore_Sword_Statement(Sword_Statement):
                     try:
                         deposited_on = datetime.strptime(do.text.strip(), "%Y-%m-%dT%H:%M:%SZ") # e.g. 2011-03-02T20:50:06Z
                         s_l.debug("Registering Deposited On: " + do.text.strip())
-                    except Exception, e:
+                    except Exception as e:
                         s_l.error("Failed to parse date - %s" % e)
                         s_l.error("Supplied date as string was: %s" % do.text.strip())
 

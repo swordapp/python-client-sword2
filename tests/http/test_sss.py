@@ -4,10 +4,11 @@ from sword2 import Connection, Entry
 from sword2.exceptions import PackagingFormatNotAvailable
 from sword2.compatible_libs import json
 
-SSS_PY_URL="http://sword-app.svn.sourceforge.net/viewvc/sword-app/sss/trunk/sss.py?revision=HEAD"
+#SSS_PY_URL="http://sword-app.svn.sourceforge.net/viewvc/sword-app/sss/trunk/sss.py?revision=HEAD"
+SSS_PY_URL="https://raw.githubusercontent.com/OA-DeepGreen/Simple-Sword-Server/master/sss/sss-1.0.py"
 PORT_NUMBER="8081"
 
-import subprocess, urllib, tempfile
+import subprocess, urllib.request, urllib.parse, urllib.error, tempfile
 import os
 
 import atexit
@@ -73,7 +74,7 @@ long_service_doc = '''<?xml version="1.0" ?>
 f, sss_path = tempfile.mkstemp(suffix=".py")
 os.close(f)
 
-urllib.urlretrieve(SSS_PY_URL, sss_path)
+urllib.request.urlretrieve(SSS_PY_URL, sss_path)
 sss_pid = subprocess.Popen(['python', sss_path, PORT_NUMBER])
 sleep(1)
 
@@ -349,7 +350,7 @@ class TestConnection(TestController):
                                               filename = "readthisextrafile.txt",
                                               packaging = "http://purl.org/net/sword/package/Binary",
                                               metadata_entry = e)
-        print dr.code
+        print(dr.code)
         assert dr.code == 200
 
 
@@ -395,7 +396,7 @@ class TestConnection(TestController):
                                     in_progress=True)
         assert deposit_receipt.edit != None
         dr = conn.complete_deposit(se_iri = deposit_receipt.se_iri)
-        print "This will fail until the sss.py SWORD2 server responds properly, rather than with code 201"
+        print("This will fail until the sss.py SWORD2 server responds properly, rather than with code 201")
         assert dr.code == 200
         
     def test_24_get_sword_statement(self):
@@ -410,7 +411,7 @@ class TestConnection(TestController):
                                     in_progress=True)
         ss_iri = None
         for item_dict in deposit_receipt.links['http://purl.org/net/sword/terms/statement']:
-            if item_dict.has_key('type') and item_dict.get('type', None) == "application/atom+xml;type=feed":
+            if 'type' in item_dict and item_dict.get('type', None) == "application/atom+xml;type=feed":
                 ss_iri = item_dict.get('href')
         assert ss_iri != None
         ss = conn.get_atom_sword_statement(ss_iri)

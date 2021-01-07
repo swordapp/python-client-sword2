@@ -9,12 +9,12 @@ document which can be used directly as the metadata entry.
 Also provides Category, which is a convenience function to simplify reading in category information from an atom:entry
 """
 
-from sword2_logging import logging
-from implementation_info import __version__
+from .sword2_logging import logging
+from .implementation_info import __version__
 coll_l = logging.getLogger(__name__)
 
-from compatible_libs import etree
-from utils import NS, get_text
+from .compatible_libs import etree
+from .utils import NS, get_text
 
 from datetime import datetime
 
@@ -64,7 +64,7 @@ class Category(object):
         """ Load the `Category`'s internal attributes using the information within an `etree.SubElement`
         
         """
-        for item in e.attrib.keys():
+        for item in list(e.attrib.keys()):
             if item.endswith("scheme"):
                 self.scheme = e.attrib[item]
             elif item.endswith("term"):
@@ -165,7 +165,7 @@ class Entry(object):
         # create a namespace map which we'll use in all of the elements
         self.nsmap = {"dcterms" : "http://purl.org/dc/terms/", "atom" : "http://www.w3.org/2005/Atom"}
         self.entry = etree.fromstring(self.bootstrap if not atomEntryXml else atomEntryXml)
-        if not 'updated' in kw.keys():
+        if not 'updated' in list(kw.keys()):
             kw['updated'] = datetime.now().isoformat()
         self.add_fields(**kw)
     
@@ -180,12 +180,12 @@ class Entry(object):
             # (probably lxml)
             pass
         self.add_ns.append(prefix)
-        if prefix not in NS.keys():
+        if prefix not in list(NS.keys()):
             NS[prefix] = "{%s}%%s" % uri
             
         # we also have to handle namespaces internally, for etree implementations which
         # don't support register_namespace
-        if prefix not in self.nsmap.keys():
+        if prefix not in list(self.nsmap.keys()):
             self.nsmap[prefix] = uri
             
     def add_field(self, k, v, attrs=None):
@@ -219,7 +219,7 @@ class Entry(object):
                 e = etree.SubElement(self.entry, NS[nmsp] % tag, nsmap=self.nsmap) # Notice we explicitly declare the nsmap
                 e.text = v
                 if attrs is not None:
-                    for an, av in attrs.iteritems():
+                    for an, av in attrs.items():
                         e.set(an, av)
         elif k == "author" and isinstance(v, dict):
             self.add_author(**v)
@@ -232,7 +232,7 @@ class Entry(object):
         >>> e.add_fields(dcterms_title="Origin of the Species",
                         dcterms_contributor="Darwin, Charles")
         """
-        for k,v in kw.iteritems():
+        for k,v in kw.items():
             self.add_field(k,v)
 
     def add_author(self, name, uri=None, email=None):
