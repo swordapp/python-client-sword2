@@ -1,0 +1,18 @@
+[[package]]
+name = "httplib2"
+version = "0.18.1"
+description = "A comprehensive HTTP client library."
+category = "main"
+optional = false
+python-versions = "*"
+
+[metadata]
+lock-version = "1.1"
+python-versions = "^3.8.6"
+content-hash = "016d2073eb647ec80f875ee0ca5fdd8be6a6ad98062baf25c89edba344365ab1"
+
+[metadata.files]
+httplib2 = [
+    {file = "httplib2-0.18.1-py3-none-any.whl", hash = "sha256:ca2914b015b6247791c4866782fa6042f495b94401a0f0bd3e1d6e0ba2236782"},
+    {file = "httplib2-0.18.1.tar.gz", hash = "sha256:8af66c1c52c7ffe1aa5dc4bcd7c769885254b0756e6e69f953c7f0ab49a70ba3"},
+]
