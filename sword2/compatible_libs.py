@@ -5,7 +5,7 @@
 Provides the module with access to certain libraries that have more than one suitable implementation, in a optimally
 degredating manner.
 
-Provides - `etree` and `json`
+Provides - `etree`
 
 `etree` can be from any of the following, if found in the local environment:
     `lxml`
@@ -13,10 +13,6 @@ Provides - `etree` and `json`
     `elementtree`
     `cElementTree`
 
-`json` can be from any of the following:
-    `json` (python >= 2.6)
-    `simplejson`
-    
 If no suitable library is found, then it will pass back `None`
 """
 
@@ -39,12 +35,3 @@ except ImportError:
             except ImportError:
                 cl_l.error("Couldn't find a suitable ElementTree library to use in this environment.")
                 etree = None
-
-try:
-    import json
-except ImportError:
-    try:
-        import simplejson as json
-    except ImportError:
-        cl_l.error("Couldn't find a suitable simplejson-like library to use to serialise JSON")
-        json = None
