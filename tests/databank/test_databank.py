@@ -198,7 +198,7 @@ class TestConnection(TestController):
         assert new_receipt.parsed == True
         assert new_receipt.valid == True
         
-        print new_receipt.to_xml()
+        print(new_receipt.to_xml())
         
         # Here are some more things we can know about the receipt
         # 1 - the links will all contain the suggested identifier
@@ -207,7 +207,7 @@ class TestConnection(TestController):
         # 4 - the DC metadata will be reflected back at us
         # 5 - the atom metadata will be populated in some way
         
-        for rel, links in new_receipt.links.iteritems():
+        for rel, links in new_receipt.links.items():
             for link in links:
                 assert suggested_id in link['href']
                 assert col.title in link['href']
@@ -841,7 +841,7 @@ class TestConnection(TestController):
         assert len(statement.states) == 1
         assert statement.states[0][0] == "http://databank.ox.ac.uk/state/ZipFileAdded"
         
-        print etree.tostring(statement.dom, pretty_print=True)
+        print(etree.tostring(statement.dom, pretty_print=True))
         
         # check the metadata
         md_count = 0
@@ -859,7 +859,7 @@ class TestConnection(TestController):
                         assert element.attrib.get(RDF + "resource") == "http://whatever/"
                         md_count += 1
                 
-        print "Metadata Count: " + str(md_count)
+        print("Metadata Count: " + str(md_count))
         assert md_count == 3
 
     def test_34_check_metadata_only_state(self):

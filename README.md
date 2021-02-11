@@ -21,7 +21,9 @@ The python client tries to use any suitable ElementTree library implementation (
 
 Installation:
 
-python setup.py install
+```shell
+$ pip install .
+```
 
 (use of a virtualenv is recommended)
 

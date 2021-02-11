@@ -1,3 +1,5 @@
+store/
+
 .cache/
 build/
 dist/
@@ -5,5 +7,8 @@ sword2.egg-info/
 *.pyc
 *.py~
 *.conf
+
+.coverage
+htmlcov/
 
 .DS_Store

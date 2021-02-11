@@ -5,7 +5,7 @@
 Utility methods used within the module
 """
 
-from sword2_logging import logging
+from .sword2_logging import logging
 utils_l = logging.getLogger(__name__)
 
 from time import time
@@ -158,7 +158,7 @@ class Timer(object):
         for name in args:
             if name in self.counts:
                 duration = st_time - self.counts[name]
-                if not self.duration.has_key(name):
+                if name not in self.duration:
                     self.duration[name] = []
                 self.duration[name].append(duration)
                 r.append((len(self.duration[name]) - 1, duration))
@@ -204,8 +204,8 @@ def create_multipart_related(payloads):
         else:
             body.append('Content-Disposition: attachment; name="%(key)s"' % (payload))
         
-        if payload.has_key("headers"):
-            for f,v in payload['headers'].iteritems():
+        if "headers" in payload:
+            for f,v in payload['headers'].items():
                 body.append("%s: %s" % (f, v))     # TODO force ASCII?
         
         body.append('MIME-Version: 1.0')

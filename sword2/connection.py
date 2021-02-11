@@ -9,23 +9,23 @@ See http://sword-app.svn.sourceforge.net/viewvc/sword-app/spec/trunk/SWORDProfil
 about the SWORD2 AtomPub profile.
  
 """
-from sword2_logging import logging
+from .sword2_logging import logging
 conn_l = logging.getLogger(__name__)
 
-from utils import Timer, NS, get_md5, create_multipart_related
+from .utils import Timer, NS, get_md5, create_multipart_related
 
-from transaction_history import Transaction_History
-from service_document import ServiceDocument
-from deposit_receipt import Deposit_Receipt
-from error_document import Error_Document
-from statement import Atom_Sword_Statement, Ore_Sword_Statement
-from exceptions import *
+from .transaction_history import Transaction_History
+from .service_document import ServiceDocument
+from .deposit_receipt import Deposit_Receipt
+from .error_document import Error_Document
+from .statement import Atom_Sword_Statement, Ore_Sword_Statement
+from .exceptions import *
 
-from compatible_libs import etree
+from lxml import etree
 
 # import httplib2
-import http_layer
-import urllib
+from . import http_layer
+import urllib.request, urllib.parse, urllib.error
 
 class Connection(object):
     """
@@ -294,7 +294,7 @@ Loading in a locally held Service Document:
         4XX not listed:
             Will throw a general `sword2.exceptions.HTTPResponseError` exception
         """
-        conn_l.debug("Error body received from server: " + str(content))
+        conn_l.debug("Error body received from server: {x}".format(x=str(content)))
         
         if resp['status'] == 401:
             conn_l.error("You are unauthorised (401) to access this document on the server. Check your username/password credentials and your 'On Behalf Of'")
@@ -592,7 +592,7 @@ Loading in a locally held Service Document:
             headers['Content-Type'] = str(mimetype)
             headers['Content-MD5'] = str(md5sum)
             headers['Content-Length'] = str(f_size)
-            headers['Content-Disposition'] = "attachment; filename=%s" % urllib.quote(filename)
+            headers['Content-Disposition'] = "attachment; filename=%s" % urllib.parse.quote(filename)
             if packaging is not None:
                 headers['Packaging'] = str(packaging)
             
@@ -1752,8 +1752,8 @@ Response:
         if self.honour_receipts and packaging:
             # Make sure that the packaging format is available from the deposit receipt, if loaded
             conn_l.debug("Checking that the packaging format '%s' is available." % content_iri)
-            conn_l.debug("Cached Cont-IRI Receipts: %s" % self.cont_iris.keys())
-            if content_iri in self.cont_iris.keys():
+            conn_l.debug("Cached Cont-IRI Receipts: %s" % list(self.cont_iris.keys()))
+            if content_iri in list(self.cont_iris.keys()):
                 if not (packaging in self.cont_iris[content_iri].packaging):
                     conn_l.error("Desired packaging format '%' not available from the server, according to the deposit receipt. Change the client parameter 'honour_receipts' to False to avoid this check.")
                     return self._return_error_or_exception(PackagingFormatNotAvailable, {}, "")
