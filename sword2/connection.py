@@ -21,7 +21,7 @@ from .error_document import Error_Document
 from .statement import Atom_Sword_Statement, Ore_Sword_Statement
 from .exceptions import *
 
-from .compatible_libs import etree
+from lxml import etree
 
 # import httplib2
 from . import http_layer

@@ -55,7 +55,7 @@ sd_l = logging.getLogger(__name__)
 
 from .collection import SDCollection
 
-from .compatible_libs import etree
+from lxml import etree
 from .utils import NS, get_text
 
 class ServiceDocument(object):

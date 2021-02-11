@@ -13,12 +13,14 @@ Two other classes, `Collection_Feed` and `Sword_Statement` are works in progress
 for the things they logically handle.
 
 """
+import json
 
 from .sword2_logging import logging
 from .implementation_info import __version__
+
 coll_l = logging.getLogger(__name__)
 
-from .compatible_libs import etree
+from lxml import etree
 from .utils import NS, get_text
 
 from .deposit_receipt import Deposit_Receipt
@@ -46,18 +48,19 @@ class SDCollection(object):
     >>> c.title
     "Thesis Deposit"
     """
+
     def __init__(self, title=None,
-                       href=None,
-                       accept=[],
-                       accept_multipart=[],
-                       categories=[],
-                       collectionPolicy=None,
-                       description = None,
-                       mediation=None,
-                       treatment=None,
-                       acceptPackaging=[],
-                       service=[],
-                       dom=None):
+                 href=None,
+                 accept=[],
+                 accept_multipart=[],
+                 categories=[],
+                 collectionPolicy=None,
+                 description=None,
+                 mediation=None,
+                 treatment=None,
+                 acceptPackaging=[],
+                 service=[],
+                 dom=None):
         """
         Creates a `Collection` object - as used by `sword2.Service_Document`
 
@@ -110,7 +113,7 @@ class SDCollection(object):
         Again, this step is done by the `sword2.Service_Document`, but if the above XML was in the `doc` variable:
 
             # Get an etree-compatible library, such as from `lxml.etree`, `xml.etree` or `elementtree.ElementTree`
-            >>> from sword2.compatible_libs import etree
+            >>> from lxml import etree
             >>> from sword2 import SDCollection
             >>> dom = etree.fromstring(doc)
 
@@ -224,31 +227,24 @@ class SDCollection(object):
 
         NB this uses the attributes of the object, not the cached DOM object, so information can be altered/added
         on the fly."""
-        from .compatible_libs import json
-        if json:
-            _j = {'title':self.title,
-                  'href':self.href,
-                  'description':self.description,
-                  'accept':self.accept,
-                  'accept_multipart':self.accept_multipart,
-                  'mediation':self.mediation,
-                  'treatment':self.treatment,
-                  'collectionPolicy':self.collectionPolicy,
-                  'acceptPackaging':self.acceptPackaging,
-                  'service':self.service,
-                  'categories':self.categories}
-            return json.dumps(_j)
-        else:
-            coll_l.error("Could not return information about Collection '%s' as JSON" % self.title)
-            return
+        return json.dumps({'title': self.title,
+              'href': self.href,
+              'description': self.description,
+              'accept': self.accept,
+              'accept_multipart': self.accept_multipart,
+              'mediation': self.mediation,
+              'treatment': self.treatment,
+              'collectionPolicy': self.collectionPolicy,
+              'acceptPackaging': self.acceptPackaging,
+              'service': self.service,
+              'categories': self.categories})
+
 
 class Collection_Feed(object):
     """Nothing to see here yet. Move along."""
+
     def __init__(self, feed_iri=None, http_client=None, feed_xml=None):
         self.feed_xml = feed_xml
         self.feed_iri = feed_iri
         self._cached = []
         self.h = http_client
-
-
-

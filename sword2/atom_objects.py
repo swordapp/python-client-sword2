@@ -9,14 +9,16 @@ document which can be used directly as the metadata entry.
 Also provides Category, which is a convenience function to simplify reading in category information from an atom:entry
 """
 
+from datetime import datetime
+from lxml import etree
+
 from .sword2_logging import logging
 from .implementation_info import __version__
 coll_l = logging.getLogger(__name__)
 
-from .compatible_libs import etree
+
 from .utils import NS, get_text
 
-from datetime import datetime
 
 class Category(object):
     """Convenience class to aid in the intepreting of atom:category elements in XML. Currently, this is read-only.
@@ -263,11 +265,11 @@ class Entry(object):
 
     def __str__(self):
         """Export the XML to a bytestring, ready for use"""
-        xml_str = etree.tostring(self.entry)
+        xml_str = etree.tounicode(self.entry)
         if not xml_str.startswith('<?xml version="1.0"?>'):
             xml_str = '<?xml version="1.0"?>' + xml_str
         return xml_str
-        
+
     def pretty_print(self):
         """A version of the XML document which should be slightly more readable on the command line."""
         return etree.tostring(self.entry, pretty_print=True)

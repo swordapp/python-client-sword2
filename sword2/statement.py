@@ -3,7 +3,7 @@ from .utils import NS, get_text
 from .atom_objects import Category
 from .deposit_receipt import Deposit_Receipt
 from .sword2_logging import logging
-from .compatible_libs import etree
+from lxml import etree
 
 s_l = logging.getLogger(__name__)
 
