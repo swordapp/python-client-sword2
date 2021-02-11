@@ -1,0 +1,47 @@
+[tool.poetry]
+name = "sword2"
+version = "0.3"
+description = "SWORDv2 Python client"
+authors = [
+    "Ben O'Steen <beno@gmail.com>",
+    "Cottage Labs <us@cottagelabs.com>",
+]
+maintainers = [
+    "Cottage Labs <us@cottagelabs.com>",
+]
+readme = "README.md"
+license = "Apache-2.0"
+
+homepage = "http://swordapp.org/"
+repository = "https://github.com/swordapp/python-client-sword2"
+documentation = "https://github.com/swordapp/python-client-sword2/wiki"
+
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Topic :: Communications",
+    "Topic :: Internet",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+keywords=[ "sword-app", "atom", "sword2", "http" ]
+
+[tool.poetry.dependencies]
+python = ">=3.7"
+httplib2 = "^0.18.1"
+lxml = "^4.6.2"
+
+[tool.poetry.dev-dependencies]
+lxml-stubs = "^0.1.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
