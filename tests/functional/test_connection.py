@@ -1,7 +1,8 @@
+import json
+
 from . import TestController
 
 from sword2 import Connection
-from sword2.compatible_libs import json
 
 long_service_doc = '''<?xml version="1.0" ?>
 <service xmlns:dcterms="http://purl.org/dc/terms/"

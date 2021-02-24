@@ -1,6 +1,7 @@
+from lxml import etree
+
 from . import TestController
 from sword2 import Connection, Entry, Error_Document, Atom_Sword_Statement, Ore_Sword_Statement
-from sword2.compatible_libs import etree
 
 PACKAGE = "tests/spec/example.zip"
 PACKAGE_MIME = "application/zip"
