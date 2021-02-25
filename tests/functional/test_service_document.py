@@ -1,7 +1,8 @@
+import json
+
 from . import TestController
 
 from sword2 import SDCollection, ServiceDocument
-from sword2.compatible_libs import json
 
 class TestSDCollection(TestController):
     def test_01_blank_init(self):

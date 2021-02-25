@@ -1,8 +1,9 @@
+import json
+
 from . import TestController
 
 from sword2 import Connection, Entry
 from sword2.exceptions import PackagingFormatNotAvailable
-from sword2.compatible_libs import json
 
 #SSS_PY_URL="http://sword-app.svn.sourceforge.net/viewvc/sword-app/sss/trunk/sss.py?revision=HEAD"
 SSS_PY_URL="https://raw.githubusercontent.com/OA-DeepGreen/Simple-Sword-Server/master/sss/sss-1.0.py"
