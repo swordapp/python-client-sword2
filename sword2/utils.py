@@ -221,7 +221,10 @@ def create_multipart_related(payloads):
             if hasattr(payload['data'], 'read'):
                 body.append(b64encode(payload['data'].read()))
             else:
-                body.append(b64encode(payload['data']))
+                try:
+                    body.append(b64encode(payload['data']))
+                except TypeError:
+                    body.append(b64encode(payload['data'].encode("utf-8")))
     body.append('--' + BOUNDARY + '--')
     body.append('')
     body_bytes = CRLF.join(body)
