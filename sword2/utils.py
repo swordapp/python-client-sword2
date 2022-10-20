@@ -188,7 +188,7 @@ def create_multipart_related(payloads):
     """
     # Generate random boundary code
     # TODO check that it does not occur in the payload data
-    bhash = md5(datetime.now().isoformat()).hexdigest()    # eg 'd8bb3ea6f4e0a4b4682be0cfb4e0a24e'
+    bhash = md5(datetime.now().isoformat().encode()).hexdigest()    # eg 'd8bb3ea6f4e0a4b4682be0cfb4e0a24e'
     BOUNDARY = '===========%s_$' % bhash
     CRLF = '\r\n'   # As some servers might barf without this.
     body = []
