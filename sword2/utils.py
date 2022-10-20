@@ -188,9 +188,9 @@ def create_multipart_related(payloads):
     """
     # Generate random boundary code
     # TODO check that it does not occur in the payload data
-    bhash = md5(datetime.now().isoformat()).hexdigest()    # eg 'd8bb3ea6f4e0a4b4682be0cfb4e0a24e'
+    bhash = md5(datetime.now().isoformat().encode()).hexdigest()    # eg 'd8bb3ea6f4e0a4b4682be0cfb4e0a24e'
     BOUNDARY = '===========%s_$' % bhash
-    CRLF = '\r\n'   # As some servers might barf without this.
+    CRLF = b'\r\n'   # As some servers might barf without this.
     body = []
     for payload in payloads:   # predicatable ordering...
         body.append('--' + BOUNDARY)
@@ -213,17 +213,20 @@ def create_multipart_related(payloads):
             body.append('Content-Transfer-Encoding: base64')
             body.append('')
             if hasattr(payload['data'], 'read'):
-                body.append(b64encode(payload['data'].read()))
+                body.append(b64encode(payload['data'].read()).decode())
             else:
-                body.append(b64encode(payload['data']))
+                body.append(b64encode(payload['data']).decode())
         else:
             body.append('')
             if hasattr(payload['data'], 'read'):
-                body.append(b64encode(payload['data'].read()))
+                body.append(b64encode(payload['data'].read()).decode())
             else:
-                body.append(b64encode(payload['data']))
+                try:
+                    body.append(b64encode(payload['data']).decode())
+                except TypeError:
+                    body.append(b64encode(payload['data'].encode("utf-8")).decode())
     body.append('--' + BOUNDARY + '--')
     body.append('')
-    body_bytes = CRLF.join(body)
+    body_bytes = CRLF.join([line.encode("utf-8") for line in body])
     content_type = 'multipart/related; boundary="%s"' % BOUNDARY
     return content_type, body_bytes
