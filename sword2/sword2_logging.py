@@ -5,14 +5,15 @@
 `sword2` logging
 """
 
-import imp
+import importlib.util
 import os
 import logging
 import logging.config
 
 try:
-    _, sword2_path, _ = imp.find_module("sword2")
-except ImportError:
+    spec = importlib.util.find_spec("sword2")
+    sword2_path = os.path.dirname(spec.origin) if spec and spec.origin else ""
+except (ImportError, AttributeError):
     sword2_path = ""
 SWORD2_LOGGING_CONFIG = os.path.join(
     sword2_path, "data", "sword2_logging.conf"
