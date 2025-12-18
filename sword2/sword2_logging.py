@@ -59,9 +59,8 @@ def create_logging_config(pathtologgingconf=None):
     os.makedirs(d)
 
     # write the basic config to the file
-    fn = open(pathtologgingconf, "wb")
-    fn.write(BASIC_CONFIG)
-    fn.close()
+    with open(pathtologgingconf, "w") as fn:
+        fn.write(BASIC_CONFIG)
 
 
 # if not os.path.isfile(SWORD2_LOGGING_CONFIG):
