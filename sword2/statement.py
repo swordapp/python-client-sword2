@@ -101,7 +101,7 @@ class Atom_Sword_Statement(Sword_Statement):
         if self.valid:
             self._enumerate_feed()
         else:
-            s_l.warn(
+            s_l.warning(
                 "Statement did not parse as valid, so the content will"
                 + " not be examined further; see the 'dom' attribute for the xml"
             )
@@ -201,7 +201,7 @@ class Ore_Sword_Statement(Sword_Statement):
         if self.valid:
             self._enumerate_descriptions()
         else:
-            s_l.warn(
+            s_l.warning(
                 "Statement did not parse as valid, so the content will"
                 + " not be examined further; see the 'dom' attribute for the xml"
             )
