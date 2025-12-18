@@ -1,6 +1,8 @@
 import json
 from .sword2_logging import logging
+
 http_l = logging.getLogger(__name__)
+
 
 class HttpResponse(object):
     def __init__(self, *args, **kwargs):
@@ -27,17 +29,23 @@ class HttpResponse(object):
 
 
 class HttpLayer(object):
-    def __init__(self, *args, **kwargs): pass
-    def add_credentials(self, username, password): pass
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def add_credentials(self, username, password):
+        pass
+
     def request(self, uri, method, headers=None, payload=None):
         # should return a tuple of an HttpResponse object and the content
         pass
+
 
 ################################################################################
 # Default httplib2 implementation
 ################################################################################
 
 import httplib2
+
 
 class HttpLib2Response(HttpResponse):
     def __init__(self, response):
@@ -57,6 +65,7 @@ class HttpLib2Response(HttpResponse):
     def keys(self):
         return list(self.resp.keys())
 
+
 class HttpLib2Layer(HttpLayer):
     def __init__(self, cache_dir=".cache", timeout=30.0, ca_certs=None):
         self.h = httplib2.Http(cache_dir, timeout=timeout, ca_certs=ca_certs)
@@ -65,7 +74,7 @@ class HttpLib2Layer(HttpLayer):
         self.h.add_credentials(username, password)
 
     def request(self, uri, method, headers=None, payload=None):
-        if hasattr(payload, 'read'):
+        if hasattr(payload, "read"):
             # Need to work out why a 401 challenge will stop httplib2 from sending the file...
             # likely need to make it re-seek to 0...
             # FIXME: In the meantime, read the file into memory... *sigh*
@@ -73,11 +82,13 @@ class HttpLib2Layer(HttpLayer):
         resp, content = self.h.request(uri, method, headers=headers, body=payload)
         return (HttpLib2Response(resp), content)
 
-################################################################################    
+
+################################################################################
 # Guest urllib2 implementation
 ################################################################################
 
 import urllib.request, urllib.error, urllib.parse, base64
+
 
 class PreemptiveBasicAuthHandler(urllib.request.HTTPBasicAuthHandler):
     def __init__(self, username, password):
@@ -85,10 +96,14 @@ class PreemptiveBasicAuthHandler(urllib.request.HTTPBasicAuthHandler):
         self.password = password
 
     def http_request(self, request):
-        request.add_header(self.auth_header, 'Basic %s' % base64.b64encode(self.username + ':' + self.password))
+        request.add_header(
+            self.auth_header,
+            "Basic %s" % base64.b64encode(self.username + ":" + self.password),
+        )
         return request
 
     https_request = http_request
+
 
 class UrlLib2Response(HttpResponse):
     def __init__(self, response):
@@ -116,6 +131,7 @@ class UrlLib2Response(HttpResponse):
     def keys(self):
         return list(self.headers.keys()) + ["status"]
 
+
 # http://stackoverflow.com/questions/2502596/python-http-post-a-large-file-with-streaming
 """
 import urllib2
@@ -135,6 +151,7 @@ response = urllib2.urlopen(request)
 mmapped_file_as_string.close()
 f.close()
 """
+
 
 class UrlLib2Layer(HttpLayer):
     def __init__(self, opener=None):
@@ -167,14 +184,14 @@ class UrlLib2Layer(HttpLayer):
                 req = urllib.request.Request(uri, payload, headers)
                 # monkey-patch the request method (which seems to be the fastest
                 # way to do this)
-                req.get_method = lambda: 'PUT'
+                req.get_method = lambda: "PUT"
                 response = self.opener.open(req)
                 return UrlLib2Response(response), response.read()
             elif method == "DELETE":
                 req = urllib.request.Request(uri, None, headers)
                 # monkey-patch the request method (which seems to be the fastest
                 # way to do this)
-                req.get_method = lambda: 'DELETE'
+                req.get_method = lambda: "DELETE"
                 response = self.opener.open(req)
                 return UrlLib2Response(response), response.read()
             else:
@@ -186,4 +203,3 @@ class UrlLib2Layer(HttpLayer):
             except Exception as e:
                 # unable to read()
                 return UrlLib2Response(e), None
-

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-""" Collection classes
+"""Collection classes
 
 These classes are used in their documented manner but most collect or group various other items
 to make them suitable for use.
@@ -13,6 +13,7 @@ Two other classes, `Collection_Feed` and `Sword_Statement` are works in progress
 for the things they logically handle.
 
 """
+
 import json
 
 from .sword2_logging import logging
@@ -49,18 +50,21 @@ class SDCollection(object):
     "Thesis Deposit"
     """
 
-    def __init__(self, title=None,
-                 href=None,
-                 accept=[],
-                 accept_multipart=[],
-                 categories=[],
-                 collectionPolicy=None,
-                 description=None,
-                 mediation=None,
-                 treatment=None,
-                 acceptPackaging=[],
-                 service=[],
-                 dom=None):
+    def __init__(
+        self,
+        title=None,
+        href=None,
+        accept=[],
+        accept_multipart=[],
+        categories=[],
+        collectionPolicy=None,
+        description=None,
+        mediation=None,
+        treatment=None,
+        acceptPackaging=[],
+        service=[],
+        dom=None,
+    ):
         """
         Creates a `Collection` object - as used by `sword2.Service_Document`
 
@@ -172,36 +176,40 @@ class SDCollection(object):
         """
         self._reset()
         self.dom = collection
-        self.title = get_text(collection, NS['atom'] % 'title')
+        self.title = get_text(collection, NS["atom"] % "title")
         # MUST have href attribute
-        self.href = collection.attrib.get('href', None)
+        self.href = collection.attrib.get("href", None)
         # Accept and Accept multipart
-        for accept in collection.findall(NS['app'] % 'accept'):
+        for accept in collection.findall(NS["app"] % "accept"):
             if accept.attrib.get("alternate", None) == "multipart-related":
                 self.accept_multipart.append(accept.text)
             else:
                 self.accept.append(accept.text)
         # Categories
-        for category_element in collection.findall(NS['atom'] % 'category'):
+        for category_element in collection.findall(NS["atom"] % "category"):
             self.categories.append(Category(dom=category_element))
         # SWORD extensions:
-        self.collectionPolicy = get_text(collection, NS['sword'] % 'collectionPolicy')
+        self.collectionPolicy = get_text(collection, NS["sword"] % "collectionPolicy")
 
         # Mediation: True/False
-        mediation = get_text(collection, NS['sword'] % 'mediation')
+        mediation = get_text(collection, NS["sword"] % "mediation")
         self.mediation = mediation.lower() == "true"
 
-        self.treatment = get_text(collection, NS['sword'] % 'treatment')
-        self.description = get_text(collection, NS['dcterms'] % 'abstract')
-        self.service = get_text(collection, NS['sword'] % 'service', plural = True)
-        self.acceptPackaging = get_text(collection, NS['sword'] % 'acceptPackaging', plural = True)
+        self.treatment = get_text(collection, NS["sword"] % "treatment")
+        self.description = get_text(collection, NS["dcterms"] % "abstract")
+        self.service = get_text(collection, NS["sword"] % "service", plural=True)
+        self.acceptPackaging = get_text(
+            collection, NS["sword"] % "acceptPackaging", plural=True
+        )
 
         # Log collection details:
         coll_l.debug(str(self))
 
     def __str__(self):
         """Provides a simple display of the pertinent information in this object suitable for CLI logging."""
-        _s = ["Collection: '%s' @ '%s'. Accept:%s" % (self.title, self.href, self.accept)]
+        _s = [
+            "Collection: '%s' @ '%s'. Accept:%s" % (self.title, self.href, self.accept)
+        ]
         if self.description:
             _s.append("SWORD: Description - '%s'" % self.description)
         if self.collectionPolicy:
@@ -227,17 +235,21 @@ class SDCollection(object):
 
         NB this uses the attributes of the object, not the cached DOM object, so information can be altered/added
         on the fly."""
-        return json.dumps({'title': self.title,
-              'href': self.href,
-              'description': self.description,
-              'accept': self.accept,
-              'accept_multipart': self.accept_multipart,
-              'mediation': self.mediation,
-              'treatment': self.treatment,
-              'collectionPolicy': self.collectionPolicy,
-              'acceptPackaging': self.acceptPackaging,
-              'service': self.service,
-              'categories': self.categories})
+        return json.dumps(
+            {
+                "title": self.title,
+                "href": self.href,
+                "description": self.description,
+                "accept": self.accept,
+                "accept_multipart": self.accept_multipart,
+                "mediation": self.mediation,
+                "treatment": self.treatment,
+                "collectionPolicy": self.collectionPolicy,
+                "acceptPackaging": self.acceptPackaging,
+                "service": self.service,
+                "categories": self.categories,
+            }
+        )
 
 
 class Collection_Feed(object):
