@@ -1,10 +1,10 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '0.2.1'
+version = "0.3.1"
 
 setup(
-    name='sword2',
+    name="sword2",
     version=version,
     description="SWORD v2 python client",
     long_description="""\
@@ -20,13 +20,13 @@ SWORD v2 python client""",
         "License :: OSI Approved :: Apache Software License",
         "Natural Language :: English",
         "Operating System :: OS Independent",
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
         "Topic :: Communications",
         "Topic :: Internet",
         "Topic :: Internet :: WWW/HTTP",
@@ -34,10 +34,10 @@ SWORD v2 python client""",
     ],
     keywords="sword-app atom sword2 http",
     author="Ben O'Steen, Cottage Labs",
-    author_email='us@cottagelabs.com',
+    author_email="us@cottagelabs.com",
     url="http://swordapp.org/",
-    license='Apache',
-    packages=find_packages(exclude=['ez_setup', 'examples', 'tests']),
+    license="Apache",
+    packages=find_packages(exclude=["ez_setup", "examples", "tests"]),
     include_package_data=True,
     zip_safe=False,
     install_requires=[
@@ -45,9 +45,9 @@ SWORD v2 python client""",
         "lxml",
     ],
     # Following left in as a memory aid for later-
-    #entry_points="""
+    # entry_points="""
     #    # -*- Entry points: -*-
     #    [console_scripts]
     #    cmd=module.path:func_name
-    #""",
+    # """,
 )

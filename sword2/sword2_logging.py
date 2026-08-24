@@ -5,16 +5,19 @@
 `sword2` logging
 """
 
-import imp
+import importlib.util
 import os
 import logging
 import logging.config
 
 try:
-    _, sword2_path, _ = imp.find_module('sword2')
-except ImportError:
+    spec = importlib.util.find_spec("sword2")
+    sword2_path = os.path.dirname(spec.origin) if spec and spec.origin else ""
+except (ImportError, AttributeError):
     sword2_path = ""
-SWORD2_LOGGING_CONFIG = os.path.join(sword2_path, 'data', 'sword2_logging.conf')  # default
+SWORD2_LOGGING_CONFIG = os.path.join(
+    sword2_path, "data", "sword2_logging.conf"
+)  # default
 
 BASIC_CONFIG = """[loggers]
 keys=root
@@ -39,6 +42,7 @@ args=(sys.stdout,)
 format=%(asctime)s - %(name)s - %(levelname)s - %(message)s
 """
 
+
 def create_logging_config(pathtologgingconf=None):
     """
     If you want to use the sword logging configuration, you should call this to create the
@@ -49,22 +53,21 @@ def create_logging_config(pathtologgingconf=None):
     # set the path to default if none is provided
     if pathtologgingconf is None:
         pathtologgingconf = SWORD2_LOGGING_CONFIG
-    
+
     # ensure that the path exists
     d = os.path.dirname(pathtologgingconf)
     os.makedirs(d)
-    
-    # write the basic config to the file
-    fn = open(pathtologgingconf, "wb")
-    fn.write(BASIC_CONFIG)
-    fn.close()
 
-#if not os.path.isfile(SWORD2_LOGGING_CONFIG):
+    # write the basic config to the file
+    with open(pathtologgingconf, "w") as fn:
+        fn.write(BASIC_CONFIG)
+
+
+# if not os.path.isfile(SWORD2_LOGGING_CONFIG):
 #    create_logging_config(SWORD2_LOGGING_CONFIG)
 #
-#logging.config.fileConfig(SWORD2_LOGGING_CONFIG)
+# logging.config.fileConfig(SWORD2_LOGGING_CONFIG)
 
 # when we call this module, load the logging configuration if it exists
 if os.path.isfile(SWORD2_LOGGING_CONFIG):
-   logging.config.fileConfig(SWORD2_LOGGING_CONFIG)
-
+    logging.config.fileConfig(SWORD2_LOGGING_CONFIG)
